@@ -1,0 +1,2101 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FORE THE APOCALYPSE</title>
+<script src="https://www.youtube.com/iframe_api"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html{height:100%;overflow:hidden;}
+body{background:#000;overflow:hidden;font-family:'Arial Black',Arial,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none;height:100%;height:100dvh;position:fixed;width:100%;-webkit-overflow-scrolling:none;}
+#gameCanvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%;touch-action:none;}
+#audioPermModal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;}
+#audioPermCard{background:rgba(5,20,5,0.99);border:2px solid rgba(80,200,80,0.6);border-radius:16px;padding:28px 26px;max-width:340px;width:100%;text-align:center;}
+#audioPermCard h2{font-size:13px;letter-spacing:4px;color:#44ff88;margin-bottom:12px;}
+#audioPermCard p{font-size:10px;color:rgba(180,220,180,0.75);line-height:1.8;margin-bottom:8px;}
+#audioPermCard .hint{font-size:9px;color:rgba(80,255,136,0.4);margin-bottom:22px;letter-spacing:1px;}
+.permBtns{display:flex;flex-direction:column;gap:10px;}
+#enableAudioBtn{background:rgba(80,200,80,0.15);border:2px solid rgba(80,200,80,0.8);border-radius:8px;color:#44ff88;font-family:'Arial Black',Arial,sans-serif;font-size:12px;letter-spacing:2px;padding:14px 20px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+#skipAudioBtn{background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:rgba(255,255,255,0.35);font-family:'Arial Black',Arial,sans-serif;font-size:9px;letter-spacing:2px;padding:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+#gameOverScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:50;display:none;align-items:center;justify-content:center;padding:20px;}
+#gameOverCard{background:rgba(5,15,5,0.99);border:2px solid #44ff44;border-radius:14px;padding:24px;max-width:360px;width:100%;text-align:center;color:#fff;}
+#gameOverCard h2{color:#44ff44;font-size:1.4em;margin-bottom:10px;}
+.stat-line{color:#ffcc44;font-size:0.88em;margin:4px 0;}
+#retryBtn{background:#44aa44;color:#fff;border:none;padding:14px 0;font-size:1em;font-family:'Arial Black',Arial,sans-serif;border-radius:10px;cursor:pointer;margin-top:14px;width:100%;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+#cogBtn{position:fixed;top:18px;left:18px;z-index:30;pointer-events:auto;background:rgba(5,20,5,0.85);border:1px solid rgba(80,200,80,0.5);border-radius:50%;width:44px;height:44px;font-size:20px;color:rgba(80,200,80,0.85);cursor:pointer;display:none;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+#cogMenuOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:80;display:none;align-items:center;justify-content:center;padding:16px;}
+#cogMenuOverlay.show{display:flex;}
+#cogCard{background:rgba(5,20,5,0.99);border:2px solid rgba(80,200,80,0.4);border-radius:14px;padding:22px 24px;max-width:340px;width:100%;position:relative;color:#fff;}
+#cogCard h2{font-size:11px;letter-spacing:4px;color:#44ff88;margin-bottom:18px;text-align:center;}
+#closeCog{position:absolute;top:13px;right:15px;background:transparent;border:none;color:rgba(80,200,80,0.7);font-size:20px;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.cogSection label{font-size:8px;letter-spacing:2px;color:rgba(80,200,80,0.7);display:block;margin-bottom:6px;}
+#ytInput{width:100%;background:rgba(0,0,0,0.6);border:1px solid rgba(80,200,80,0.3);border-radius:5px;color:#66ff99;font-size:9px;padding:7px 9px;font-family:'Arial Black',Arial,sans-serif;outline:none;margin-bottom:7px;}
+.cogRow{display:flex;gap:7px;margin-bottom:7px;}
+.cogMusicBtn{flex:1;background:transparent;border:1px solid rgba(80,200,80,0.35);border-radius:5px;color:rgba(80,200,80,0.85);font-size:9px;letter-spacing:1px;padding:8px 4px;cursor:pointer;font-family:'Arial Black',Arial,sans-serif;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+#musicStatus{font-size:8px;color:rgba(80,200,80,0.5);min-height:13px;margin-bottom:8px;}
+.volRow{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.volRow span{font-size:8px;letter-spacing:1px;color:rgba(80,200,80,0.6);min-width:62px;}
+.volSlider{flex:1;-webkit-appearance:none;height:3px;border-radius:2px;background:rgba(80,200,80,0.25);outline:none;}
+.volSlider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#44ff88;cursor:pointer;}
+#grenadeBtn{position:fixed;bottom:22%;right:14px;z-index:30;background:#1a1000;border:3px solid #ffaa00;border-radius:50%;color:#fff;font-family:'Arial Black',Arial,sans-serif;font-size:9px;letter-spacing:1px;width:64px;height:64px;text-align:center;pointer-events:auto;touch-action:manipulation;cursor:pointer;display:none;-webkit-tap-highlight-color:transparent;flex-direction:column;align-items:center;justify-content:center;padding:0;}
+#grenadeBtn.ready{border-color:#ffaa00;box-shadow:0 0 16px rgba(255,170,0,0.9);background:#2a1800;}
+#grenadeBtn.locked{border-color:#555;color:#888;}
+#ytPlayerContainer{position:fixed;left:-220px;bottom:0;width:200px;height:200px;pointer-events:none;}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<div id="audioPermModal">
+  <div id="audioPermCard">
+    <h2>FORE THE APOCALYPSE</h2>
+    <p>Colin "Monster" Johnson needs you.<br>Enable audio for maximum carnage.</p>
+    <p class="hint">Toggle music anytime via the gear menu</p>
+    <div class="permBtns">
+      <button id="enableAudioBtn">ENABLE AUDIO &amp; PLAY</button>
+      <button id="skipAudioBtn">Play without sound</button>
+    </div>
+  </div>
+</div>
+
+<div id="gameOverScreen">
+  <div id="gameOverCard">
+    <h2>FORE!</h2>
+    <div id="finalStats"></div>
+    <button id="retryBtn">TEE IT UP AGAIN</button>
+  </div>
+</div>
+
+<button id="cogBtn">⚙</button>
+
+<div id="cogMenuOverlay">
+  <div id="cogCard">
+    <button id="closeCog">&#x2715;</button>
+    <h2>SETTINGS</h2>
+    <div class="cogSection">
+      <label>MUSIC — PASTE YOUTUBE LINK</label>
+      <input id="ytInput" type="text" placeholder="https://youtube.com/watch?v=..." value="https://youtu.be/XMcbjp4Sq4M">
+      <div class="cogRow">
+        <button class="cogMusicBtn" id="ytPlay">PLAY</button>
+        <button class="cogMusicBtn" id="ytStop">STOP</button>
+      </div>
+      <div id="musicStatus">No music loaded</div>
+      <div class="volRow"><span>MUSIC VOL</span><input type="range" class="volSlider" id="musicVol" min="0" max="100" value="60"></div>
+      <div class="volRow"><span>SFX VOL</span><input type="range" class="volSlider" id="sfxVol" min="0" max="100" value="60"></div>
+    </div>
+  </div>
+</div>
+
+<button id="grenadeBtn"><div style="font-size:22px;line-height:1;">💣</div><div id="grenadeBtnLabel" style="font-size:8px;letter-spacing:1px;margin-top:2px;">GRENADE</div></button>
+
+<div id="ytPlayerContainer"></div>
+
+<script>
+'use strict';
+
+/* =========================================================
+   CANVAS + RESIZE
+========================================================= */
+var canvas = document.getElementById('gameCanvas');
+var ctx = canvas.getContext('2d');
+var W = 0, H = 0;
+var frameCount = 0;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', function() { setTimeout(resize, 120); });
+resize();
+
+/* =========================================================
+   PALETTE
+========================================================= */
+var C = {
+  sky1:'#b8dff0', sky2:'#4a9fd4',
+  grass:'#3a7d2c', grassDark:'#2e6422', grassLight:'#4a9e38',
+  white:'#fff', black:'#111', gray:'#888', darkGray:'#444',
+  skinLight:'#f5c8a0', skinDark:'#c8926a',
+  brown:'#7a3e1e', darkBrown:'#4a2010',
+  orange:'#f07020', pink:'#e86090',
+  gold:'#ffd700', red:'#e63c3c', blue:'#2255dd', green:'#22bb55',
+  cartYellow:'#e8c040', cartGray:'#999',
+  tan:'#d4a96a'
+};
+
+/* =========================================================
+   AUDIO
+========================================================= */
+var audioCtx = null;
+var audioUnlocked = false;
+var sfxVolume = 0.6;
+
+function unlockAudio() {
+  if (audioCtx) return;
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  audioUnlocked = true;
+}
+
+function playTone(freq, type, vol, dur, delay) {
+  if (!audioUnlocked || !audioCtx) return;
+  try {
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.type = type || 'square';
+    o.frequency.value = freq;
+    var t = audioCtx.currentTime + (delay || 0);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol * sfxVolume, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.start(t); o.stop(t + dur + 0.01);
+  } catch(e) {}
+}
+
+function sfxSwing() { playTone(440,'square',0.1,0.05); playTone(220,'sine',0.08,0.08,0.04); }
+function sfxBallHit() { playTone(880,'sine',0.15,0.06); playTone(660,'sine',0.1,0.1,0.05); }
+function sfxZombieDie() { playTone(110,'sawtooth',0.18,0.12); }
+function sfxBossDie() { playTone(55,'sawtooth',0.3,0.5); playTone(80,'sawtooth',0.25,0.4,0.1); }
+function sfxPickup() { playTone(660,'sine',0.15,0.1); playTone(880,'sine',0.15,0.1,0.08); }
+function sfxExplosion() { playTone(55,'sawtooth',0.3,0.5); playTone(80,'sawtooth',0.25,0.4,0.1); }
+function sfxLaser() { playTone(1200,'sine',0.1,0.05); }
+function sfxMachineGun() { playTone(600,'square',0.08,0.04); }
+function sfxFlame() { playTone(180,'sawtooth',0.12,0.1); }
+function sfxCartKamikaze() {
+  if (!audioUnlocked || !audioCtx) return;
+  try {
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(392, audioCtx.currentTime);
+    g.gain.value = 0.12 * sfxVolume;
+    o.start();
+    setTimeout(function() { try { g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.2); o.stop(audioCtx.currentTime+0.22); } catch(e){} }, 2000);
+  } catch(e) {}
+}
+
+/* =========================================================
+   YOUTUBE MUSIC
+========================================================= */
+var ytPlayer = null;
+var musicVolume = 0.6;
+var DEFAULT_YT = 'https://youtu.be/XMcbjp4Sq4M';
+
+function ytExtract(url) {
+  try {
+    var pl = url.match(/[?&]list=([A-Za-z0-9_-]+)/);
+    if (pl) return { type: 'playlist', id: pl[1] };
+    var v = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
+    if (v) return { type: 'video', id: v[1] };
+  } catch(e) {}
+  return null;
+}
+
+document.getElementById('cogBtn').addEventListener('click', function() {
+  document.getElementById('cogMenuOverlay').classList.add('show');
+});
+document.getElementById('closeCog').addEventListener('click', function() {
+  document.getElementById('cogMenuOverlay').classList.remove('show');
+});
+document.getElementById('cogMenuOverlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('show');
+});
+document.getElementById('ytPlay').addEventListener('click', function() {
+  var url = document.getElementById('ytInput').value.trim() || DEFAULT_YT;
+  if (ytPlayer && ytPlayer.unMute) {
+    var info = ytExtract(url);
+    if (!info) { document.getElementById('musicStatus').textContent = 'Invalid URL'; return; }
+    if (info.type === 'playlist') { ytPlayer.loadPlaylist({ list: info.id, listType: 'playlist', index: 0 }); }
+    else { ytPlayer.loadVideoById(info.id); }
+    ytPlayer.unMute(); ytPlayer.setVolume(Math.round(musicVolume * 100)); ytPlayer.playVideo();
+    document.getElementById('musicStatus').textContent = 'Playing';
+  }
+});
+document.getElementById('ytStop').addEventListener('click', function() {
+  if (ytPlayer && ytPlayer.pauseVideo) { ytPlayer.pauseVideo(); ytPlayer.mute(); }
+  document.getElementById('musicStatus').textContent = 'Stopped';
+});
+document.getElementById('musicVol').addEventListener('input', function() {
+  musicVolume = this.value / 100;
+  if (ytPlayer && ytPlayer.setVolume) ytPlayer.setVolume(Math.round(musicVolume * 100));
+});
+document.getElementById('sfxVol').addEventListener('input', function() { sfxVolume = this.value / 100; });
+
+/* =========================================================
+   BALL TYPES
+========================================================= */
+var BALL_TYPES = {
+  standard:   { name:'STANDARD',   color:'#ffffff', glow:'#ffffff', dmg:10,  area:20, desc:'One shot' },
+  multi:      { name:'MULTI-SPLIT',color:'#ff88ff', glow:'#ff44ff', dmg:6,   area:16, desc:'5-way split', count:5 },
+  laser:      { name:'LASER',      color:'#44aaff', glow:'#0066ff', dmg:20,  area:200,desc:'Cuts through all' },
+  gasoline:   { name:'GASOLINE',   color:'#ff8800', glow:'#ff4400', dmg:8,   area:55, desc:'Flame area' },
+  grenade:    { name:'GRENADE',    color:'#ffcc00', glow:'#ff8800', dmg:30,  area:80, desc:'Big blast' }
+};
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+var gs = null; // global game state
+var gameMode = 'title'; // title, playing, waveclear, bonus, gameover, victory
+
+function makeState() {
+  return {
+    running: true,
+    gameOver: false,
+    score: 0,
+    kills: 0,
+    bossKills: 0,
+    wave: 1,
+    elapsed: 0,
+    frame: 0,
+
+    // Golfer
+    golferX: W / 2,
+    golferY: H * 0.84,
+    swingState: 'idle', // idle, windup, swing
+    swingT: 0,
+    swingTimer: 0,
+    lastSwingTime: 0,
+    hp: 100,
+    maxHp: 100,
+
+    // Drone aimer
+    droneX: W / 2,
+    droneY: H * 0.38,
+    droneDragging: false,
+
+    // Current ball
+    currentBall: 'standard',
+    ballTimer: 0,    // frames remaining for special ball
+    ballFlights: [], // active ball arcs
+
+    // Zombies
+    zombies: [],
+    bosses: [],
+    lastZombieTime: 0,
+    zombieHpMult: 1,
+    kingSpawned: false,
+    kingDefeated: false,
+    clearingZombies: false,
+    clearFlashTimer: 0,
+    kingsRequired: 1,
+    kingsKilled: 0,
+    lastBossTime: Date.now(),
+
+    // Grenade balls (from button)
+    grenades: 0,
+    grenadeThreshold: 5000,
+
+    // Sniper NPCs
+    snipers: [
+      { x: W * 0.12, y: H * 0.80, side:'left',  alive:true, fireTimer:0, level:1 },
+      { x: W * 0.88, y: H * 0.80, side:'right', alive:true, fireTimer:0, level:1 }
+    ],
+
+    // Golf cart kamikazes
+    carts: [
+      { x: W * 0.18, y: H * 0.87, hp:100, maxHp:100, active:true, launched:false, burning:false, burnTimer:0, fadeAlpha:1 },
+      { x: W * 0.82, y: H * 0.87, hp:100, maxHp:100, active:true, launched:false, burning:false, burnTimer:0, fadeAlpha:1 }
+    ],
+
+    // Bonus targets on range
+    bonusTargets: [],
+    nextBonusTarget: 600,
+
+    // Powerup items
+    powerups: [], // active powerup entities: robot, tankCart, drone
+    robot: null,
+    tankCart: null,
+    droneAssist: null,
+
+    // Particles / floats
+    particles: [],
+    floats: [],
+    lightningStrikes: [],
+
+    // Pickup drops
+    ballPickups: [],     // {x,y,ballType,life}
+    lastPickupTime: 0,
+
+    // Holes in ground
+    holes: [],
+    lastHoleTime: 0,
+    nextHoleY: 0,
+
+    // Title card
+    titleCard: null,     // {text, subtext, timer}
+    rewardPending: false,
+    rewardChoices: []
+  };
+}
+
+/* =========================================================
+   DRAWING HELPERS
+========================================================= */
+function px(x) { return Math.round(x); }
+function py(y) { return Math.round(y); }
+function rnd(a,b) { return a + Math.random()*(b-a); }
+function dist(ax,ay,bx,by) { return Math.hypot(ax-bx,ay-by); }
+function lerp(a,b,t) { return a+(b-a)*t; }
+
+function rr(x,y,w,h,r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+function addFloat(x,y,text,color,big) {
+  if (gs) gs.floats.push({x,y,text,color,big:big||false,alpha:1,vy:-1.2});
+}
+
+function spawnParticles(x,y,color,count) {
+  if (!gs) return;
+  for (var i=0;i<count;i++) {
+    var a = Math.random()*Math.PI*2;
+    var spd = 1 + Math.random()*3;
+    gs.particles.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:2+Math.random()*3,color,life:1,decay:0.025+Math.random()*0.03});
+  }
+}
+
+/* =========================================================
+   DRAW RANGE BACKGROUND (from Driverz)
+========================================================= */
+function drawRange() {
+  // Sky gradient
+  var sky = ctx.createLinearGradient(0,0,0,H*0.52);
+  sky.addColorStop(0,'#b8dff0');
+  sky.addColorStop(0.5,'#ceeaf8');
+  sky.addColorStop(1,'#dff2fb');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,H*0.52);
+
+  // Clouds
+  drawFlatCloud(W*0.12, H*0.07, 52, 16);
+  drawFlatCloud(W*0.62, H*0.05, 44, 13);
+  drawFlatCloud(W*0.85, H*0.12, 34, 10);
+
+  // Back mountains
+  drawSmoothMountains(
+    [{x:W*0.10,h:H*0.17},{x:W*0.28,h:H*0.24},{x:W*0.50,h:H*0.28},{x:W*0.72,h:H*0.22},{x:W*0.90,h:H*0.16}],
+    H*0.42, '#8ab4c8', '#a8ccdc'
+  );
+  // Mid mountains
+  drawSmoothMountains(
+    [{x:W*0.0,h:H*0.10},{x:W*0.18,h:H*0.16},{x:W*0.38,h:H*0.20},{x:W*0.58,h:H*0.18},{x:W*0.78,h:H*0.14},{x:W*1.0,h:H*0.09}],
+    H*0.46, '#7aaa9e', '#90bfb4'
+  );
+
+  // Rolling hills
+  drawRollingHill(H*0.48, H*0.10, '#4a7a3a');
+  drawRollingHill(H*0.53, H*0.08, '#5a9a44');
+
+  // Fairway grass strips
+  var horizonY = H*0.52;
+  var grassColors = ['#5aaa48','#52983e','#5aaa48','#4e9038','#56a042','#4e9038','#52983e','#5aaa48'];
+  for (var i=0;i<8;i++) {
+    var y0 = horizonY + i*(H*0.26/8);
+    var y1 = horizonY + (i+1)*(H*0.26/8);
+    ctx.fillStyle = grassColors[i];
+    ctx.fillRect(0,py(y0),W,py(y1)-py(y0)+1);
+  }
+
+  // Horizon shimmer
+  ctx.fillStyle = '#6abf52';
+  for (var xi=0;xi<W;xi+=3) {
+    var hh = 2+Math.sin(frameCount*0.04+xi*0.25)*1.5;
+    ctx.fillRect(xi,py(horizonY-hh),2,hh+1);
+  }
+
+  // Pine trees
+  var treeYBase = H*0.49;
+  var treeXs = [0.04,0.10,0.16,0.83,0.88,0.93,0.97];
+  treeXs.forEach(function(xf,i) { drawPineTree(W*xf, treeYBase, [12,10,14,9,11,13,10][i%7]); });
+
+  // Yardage markers
+  drawYardagePost(W*0.10, H*0.64, '50');
+  drawYardagePost(W*0.90, H*0.64, '50');
+  drawYardagePost(W*0.08, H*0.57, '100');
+  drawYardagePost(W*0.92, H*0.57, '100');
+  drawYardagePost(W*0.06, H*0.52, '150');
+  drawYardagePost(W*0.94, H*0.52, '150');
+
+  // Tee mat
+  var matY = H*0.86;
+  ctx.fillStyle = '#2a4a1e';
+  ctx.fillRect(W*0.3,matY,W*0.4,H*0.03);
+  ctx.fillStyle = '#1a3a0e';
+  ctx.fillRect(W*0.38,matY+2,W*0.24,H*0.03-4);
+
+  // Ground below tee
+  ctx.fillStyle = '#2a1a08';
+  ctx.fillRect(0,H*0.89,W,H*0.11);
+}
+
+function drawSmoothMountains(peaks,baseY,colorMain,colorLight) {
+  ctx.fillStyle = colorMain;
+  ctx.beginPath();
+  ctx.moveTo(0,baseY);
+  ctx.lineTo(peaks[0].x, baseY-peaks[0].h);
+  for (var i=1;i<peaks.length;i++) {
+    var prev=peaks[i-1], cur=peaks[i];
+    var cx=(prev.x+cur.x)/2;
+    ctx.bezierCurveTo(cx,baseY-prev.h, cx,baseY-cur.h, cur.x,baseY-cur.h);
+  }
+  ctx.lineTo(W,baseY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = colorLight;
+  ctx.globalAlpha = 0.35;
+  ctx.beginPath();
+  ctx.moveTo(peaks[0].x-W*0.05, baseY-peaks[0].h*0.4);
+  for (var j=0;j<peaks.length;j++) {
+    var p=peaks[j];
+    if (j===0) ctx.lineTo(p.x, baseY-p.h);
+    else {
+      var prv=peaks[j-1];
+      var cx2=(prv.x+p.x)/2;
+      ctx.bezierCurveTo(cx2,baseY-prv.h,cx2,baseY-p.h,p.x,baseY-p.h);
+    }
+    ctx.lineTo(p.x+W*0.03, baseY-p.h*0.4);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawRollingHill(baseY,bumpH,color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (var i=0;i<=8;i++) {
+    var x=W*i/8;
+    var y=baseY - Math.sin(i/8*Math.PI)*bumpH;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,H);
+  ctx.lineTo(0,H);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawFlatCloud(x,y,w,h) {
+  ctx.globalAlpha = 0.88;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.ellipse(px(x),py(y),w,h,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(px(x+w*0.4),py(y+h*0.2),w*0.6,h*0.7,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(px(x-w*0.35),py(y+h*0.25),w*0.55,h*0.65,0,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawPineTree(x,y,size) {
+  ctx.fillStyle = '#2d5a28';
+  for (var tier=0;tier<3;tier++) {
+    var tw=size*(1-tier*0.25);
+    var ty=y-tier*(size*0.55);
+    ctx.beginPath();
+    ctx.moveTo(px(x),py(ty-size*0.7));
+    ctx.lineTo(px(x+tw),py(ty));
+    ctx.lineTo(px(x-tw),py(ty));
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = '#4a2a10';
+  ctx.fillRect(px(x-size*0.12),py(y),Math.ceil(size*0.24),size*0.4);
+}
+
+function drawYardagePost(x,y,label) {
+  ctx.fillStyle = C.white;
+  ctx.fillRect(px(x-1),py(y),2,12);
+  ctx.fillStyle = '#3355cc';
+  ctx.fillRect(px(x-8),py(y-10),16,10);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 7px monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label,px(x),py(y-5));
+}
+
+/* =========================================================
+   DRAW GOLFER (Colin "Monster" Johnson) - older, stocky, wearing hat
+========================================================= */
+function drawGolfer(x,y,swingT,swingPhase) {
+  ctx.save();
+  ctx.translate(px(x),py(y));
+
+  // Shadow
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = C.black;
+  ctx.beginPath(); ctx.ellipse(0,2,18,6,0,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Legs - khaki pants (wide, older golfer build)
+  ctx.fillStyle = '#c8aa6e';
+  ctx.fillRect(-10,-2,9,20);
+  ctx.fillRect(2,-2,9,20);
+  // Shoes
+  ctx.fillStyle = C.darkBrown;
+  ctx.fillRect(-12,16,12,6);
+  ctx.fillRect(1,16,12,6);
+
+  // Belly / torso - polo shirt (white with green collar)
+  ctx.fillStyle = '#eef4ee';
+  ctx.fillRect(-12,-20,24,20);
+  // Collar
+  ctx.fillStyle = '#228844';
+  ctx.fillRect(-4,-20,8,5);
+  // Belly bump - slightly round
+  ctx.fillStyle = '#e8f0e8';
+  ctx.beginPath(); ctx.ellipse(0,-4,13,8,0,0,Math.PI,Math.PI*2); ctx.fill();
+
+  // Head - older, round face
+  ctx.fillStyle = C.skinDark;
+  ctx.beginPath(); ctx.arc(0,-30,11,0,Math.PI*2); ctx.fill();
+
+  // White/grey hair under hat
+  ctx.fillStyle = '#cccccc';
+  ctx.fillRect(-9,-38,18,6);
+
+  // Visor/cap - green
+  ctx.fillStyle = '#116633';
+  ctx.fillRect(-10,-40,20,8);
+  ctx.fillRect(8,-38,8,4); // brim
+
+  // Face details
+  ctx.fillStyle = C.black;
+  ctx.fillRect(-4,-31,3,3); // left eye
+  ctx.fillRect(2,-31,3,3);  // right eye
+  // Smile crinkle (older)
+  ctx.fillStyle = C.skinDark;
+  ctx.fillRect(-4,-25,9,2);
+  // Nose
+  ctx.fillStyle = '#c08060';
+  ctx.fillRect(-1,-28,3,3);
+
+  // Club and arms based on swing phase
+  var shoulderY = -18;
+  if (swingPhase==='idle'||swingPhase==='address') {
+    drawArm(-6,shoulderY,-10,2,6);
+    drawArm(6,shoulderY,10,2,6);
+    ctx.strokeStyle = C.darkBrown; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(10,2); ctx.lineTo(20,20); ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.fillRect(17,18,9,5);
+  } else if (swingPhase==='windup') {
+    var t = swingT;
+    drawArm(-5,shoulderY,-14+t*8,-2+t*-14,6);
+    drawArm(5,shoulderY,-2+t*4,0+t*-10,6);
+    ctx.strokeStyle = C.darkBrown; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-2+t*-10,-4+t*-10); ctx.lineTo(-20*t,-22*t-2); ctx.stroke();
+    ctx.fillStyle = '#888'; ctx.fillRect(-22*t-4,-24*t,8,5);
+  } else if (swingPhase==='swing'||swingPhase==='follow') {
+    var t2 = swingT;
+    drawArm(-6,shoulderY,-8+t2*-14,-2+t2*4,6);
+    drawArm(5,shoulderY,6+t2*-12,0+t2*2,6);
+    ctx.strokeStyle = C.darkBrown; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(8-t2*24,2-t2*10);
+    ctx.lineTo(18-t2*40,20-t2*32);
+    ctx.stroke();
+    ctx.fillStyle = '#888'; ctx.fillRect(15-t2*40,18-t2*32,8,5);
+  }
+
+  ctx.restore();
+}
+
+function drawArm(sx,sy,ex,ey,w) {
+  ctx.strokeStyle = C.skinLight;
+  ctx.lineWidth = w;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(px(sx),py(sy));
+  ctx.lineTo(px(ex),py(ey));
+  ctx.stroke();
+}
+
+/* =========================================================
+   DRAW ZOMBIE
+========================================================= */
+function drawZombie(x, y, scale, hp, maxHp, type, immune) {
+  scale = scale || 1;
+  // Map shirt types to zombie horde body/head colors
+  var bc, hc;
+  if (type==='boss')   { bc = '#8B0000'; hc = '#b22222'; }
+  else if (type==='pink')   { bc = '#992266'; hc = '#cc3388'; }
+  else if (type==='blue')   { bc = '#112288'; hc = '#2244bb'; }
+  else if (type==='orange') { bc = '#884400'; hc = '#bb6600'; }
+  else                      { bc = '#2d5a27'; hc = '#5a9952'; }
+
+  ctx.save(); ctx.translate(px(x), py(y)); ctx.scale(scale, scale);
+  if (immune) { ctx.shadowColor = '#aaaaff'; ctx.shadowBlur = 18; }
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath(); ctx.ellipse(0, 23, 12, 4, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Body
+  ctx.fillStyle = bc; ctx.beginPath(); rr(-9, 0, 18, 22, 4); ctx.fill();
+
+  // Head
+  ctx.fillStyle = hc; ctx.beginPath(); ctx.ellipse(0, -8, 11, 12, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#ff0';
+  ctx.beginPath(); ctx.ellipse(-4, -10, 3, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(4, -10, 3, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#f00';
+  ctx.beginPath(); ctx.ellipse(-4, -10, 1.5, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(4, -10, 1.5, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Mouth
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(0, -4, 5, 0.2, Math.PI - 0.2); ctx.stroke();
+  ctx.fillStyle = '#eee'; ctx.fillRect(-4, -5, 3, 3); ctx.fillRect(1, -5, 3, 3);
+
+  // Arms
+  ctx.fillStyle = hc; ctx.fillRect(-16, 2, 7, 5); ctx.fillRect(9, 2, 7, 5);
+
+  // Legs
+  ctx.fillStyle = bc; ctx.fillRect(-8, 20, 6, 8); ctx.fillRect(2, 20, 6, 8);
+
+  // Colored band on shirt so player can ID special types
+  if (type==='pink'||type==='blue'||type==='orange') {
+    ctx.fillStyle = type==='pink'?'#ff44cc':type==='blue'?'#4488ff':'#ff8800';
+    ctx.fillRect(-9, 6, 18, 5);
+  }
+
+  // Crown for boss
+  if (type === 'boss') {
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.moveTo(-10, -18); ctx.lineTo(-10, -25); ctx.lineTo(-5, -20);
+    ctx.lineTo(0, -27); ctx.lineTo(5, -20); ctx.lineTo(10, -25); ctx.lineTo(10, -18);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // HP bar
+  if (maxHp > 1) {
+    var bW = 28, bf = (hp / maxHp) * bW;
+    ctx.fillStyle = '#333'; ctx.fillRect(-bW / 2, -32, bW, 5);
+    ctx.fillStyle = hp / maxHp > 0.5 ? '#44ff44' : hp / maxHp > 0.25 ? '#ffaa00' : '#ff2222';
+    ctx.fillRect(-bW / 2, -32, bf, 5);
+  }
+
+  ctx.restore();
+}
+
+/* =========================================================
+   DRAW SNIPER NPC
+========================================================= */
+function drawSniper(sn) {
+  if (!sn.alive) return;
+  ctx.save();
+  ctx.translate(px(sn.x),py(sn.y));
+  if (sn.side==='right') ctx.scale(-1,1);
+
+  // Platform/perch
+  ctx.fillStyle = '#7a5a14';
+  ctx.fillRect(-22,-10,44,18);
+  ctx.fillStyle = '#9a7a20';
+  ctx.fillRect(-20,-8,40,14);
+  // Posts
+  ctx.fillStyle = '#5a3a0a';
+  ctx.fillRect(-18,8,7,22); ctx.fillRect(11,8,7,22);
+
+  // Golfer-sniper figure (NPC - pro style)
+  ctx.fillStyle = '#114411'; // dark green
+  ctx.fillRect(-6,-28,12,20);
+  ctx.fillStyle = C.skinLight;
+  ctx.beginPath(); ctx.arc(0,-34,8,0,Math.PI*2); ctx.fill();
+  // Cap
+  ctx.fillStyle = '#225522';
+  ctx.fillRect(-9,-42,18,10);
+  ctx.fillRect(8,-40,6,4);
+  // Eyes
+  ctx.fillStyle = C.black;
+  ctx.fillRect(-3,-36,2,2); ctx.fillRect(2,-36,2,2);
+  // Club as sniper club pointing forward
+  ctx.strokeStyle = C.darkBrown; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(8,-24); ctx.lineTo(30,-20); ctx.stroke();
+  ctx.fillStyle = '#888'; ctx.fillRect(27,-22,7,4);
+
+  // Level badge
+  ctx.fillStyle = '#00ff88'; ctx.font = 'bold 8px Arial';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('LV'+sn.level, 0, 26);
+
+  ctx.restore();
+}
+
+/* =========================================================
+   DRAW GOLF CART
+========================================================= */
+function drawGolfCart(cart) {
+  if (!cart.active) return;
+  ctx.save();
+  ctx.globalAlpha = cart.burning ? (cart.fadeAlpha||1) : 1;
+  ctx.translate(px(cart.x),py(cart.y));
+
+  if (cart.burning) {
+    // Fire!
+    var ft = frameCount*0.2;
+    ctx.fillStyle = 'rgba(255,100,0,0.85)';
+    ctx.beginPath(); ctx.ellipse(0,-14,8+Math.sin(ft)*3,10+Math.cos(ft*1.3)*3,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,220,0,0.7)';
+    ctx.beginPath(); ctx.ellipse(0,-20,5+Math.sin(ft*1.7)*2,7+Math.cos(ft)*2,0,0,Math.PI*2); ctx.fill();
+  }
+
+  // Cart body
+  ctx.fillStyle = cart.launched ? '#cc4400' : C.cartYellow;
+  ctx.beginPath(); rr(-22,-12,44,22,5); ctx.fill();
+  // Roof
+  ctx.fillStyle = cart.launched ? '#aa2200' : '#c8a030';
+  ctx.fillRect(-18,-22,36,12);
+  // Posts
+  ctx.fillStyle = '#666';
+  ctx.fillRect(-16,-22,3,12); ctx.fillRect(13,-22,3,12);
+  // Windshield
+  ctx.fillStyle = 'rgba(150,220,255,0.5)';
+  ctx.fillRect(-14,-20,28,10);
+  // Wheels
+  ctx.fillStyle = '#333';
+  ctx.beginPath(); ctx.arc(-14,10,7,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(14,10,7,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#666';
+  ctx.beginPath(); ctx.arc(-14,10,3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(14,10,3,0,Math.PI*2); ctx.fill();
+
+  // HP bar
+  if (!cart.burning) {
+    var bW=36, bf=(cart.hp/cart.maxHp)*bW;
+    ctx.fillStyle='#333'; ctx.fillRect(-18,20,bW,4);
+    ctx.fillStyle='#ff8800'; ctx.fillRect(-18,20,Math.max(0,bf),4);
+  }
+
+  // Tap hint
+  if (!cart.launched && !cart.burning) {
+    ctx.fillStyle='rgba(255,200,0,0.9)';
+    ctx.font='bold 9px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('TAP',0,32);
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+/* =========================================================
+   DRAW DRONE AIMER
+========================================================= */
+function drawDrone(x,y) {
+  ctx.save();
+  ctx.translate(px(x),py(y));
+  var pulse = 0.6 + 0.4*Math.sin(frameCount*0.12);
+  var r = 14 + 4*pulse;
+
+  // Drone body
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-8,-4,16,8);
+  // Rotors
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(-14,-8,6,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(14,-8,6,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-14,8,6,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(14,8,6,0,Math.PI*2); ctx.stroke();
+  // Arms
+  ctx.strokeStyle = '#333';
+  ctx.beginPath(); ctx.moveTo(-8,-4); ctx.lineTo(-14,-8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(8,-4); ctx.lineTo(14,-8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-8,4); ctx.lineTo(-14,8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(8,4); ctx.lineTo(14,8); ctx.stroke();
+  // Camera
+  ctx.fillStyle = '#00aaff';
+  ctx.beginPath(); ctx.arc(0,4,3,0,Math.PI*2); ctx.fill();
+
+  // Crosshair
+  ctx.globalAlpha = 0.8*pulse;
+  ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0,0,r*0.45,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-r*1.5,0); ctx.lineTo(-r*0.7,0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(r*0.7,0); ctx.lineTo(r*1.5,0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-r*1.5); ctx.lineTo(0,-r*0.7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,r*0.7); ctx.lineTo(0,r*1.5); ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+/* =========================================================
+   DRAW GOLF BALL IN FLIGHT
+========================================================= */
+function drawBallFlight(bf) {
+  var t = bf.t;
+  // Arc: parabolic from golfer to target
+  var gx = gs.golferX, gy = gs.golferY - 20;
+  var tx = bf.tx, ty = bf.ty;
+  var cx = (gx+tx)/2, cy = Math.min(gy,ty) - (dist(gx,gy,tx,ty)*0.4);
+  var bx = lerp(lerp(gx,cx,t), lerp(cx,tx,t), t);
+  var by = lerp(lerp(gy,cy,t), lerp(cy,ty,t), t);
+
+  var bc = BALL_TYPES[bf.ballType] || BALL_TYPES.standard;
+
+  // Trail
+  for (var i=1;i<=4;i++) {
+    var tt = t - i*0.04;
+    if (tt<0) continue;
+    var tx2 = lerp(lerp(gx,cx,tt), lerp(cx,bf.tx,tt), tt);
+    var ty2 = lerp(lerp(gy,cy,tt), lerp(cy,bf.ty,tt), tt);
+    ctx.globalAlpha = (0.3 - i*0.07);
+    ctx.fillStyle = bc.color;
+    ctx.beginPath(); ctx.arc(px(tx2),py(ty2),3-i*0.5,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Glow
+  ctx.shadowColor = bc.glow; ctx.shadowBlur = 12;
+  ctx.fillStyle = bc.color;
+  ctx.beginPath(); ctx.arc(px(bx),py(by),5,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Laser: draw a beam
+  if (bf.ballType==='laser') {
+    ctx.strokeStyle = '#44aaff'; ctx.lineWidth = 3; ctx.globalAlpha = 0.7;
+    ctx.shadowColor = '#0066ff'; ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.moveTo(px(gx),py(gy)); ctx.lineTo(px(bx),py(by)); ctx.stroke();
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  }
+}
+
+/* =========================================================
+   DRAW BALL PICKUP
+========================================================= */
+function drawBallPickup(p) {
+  var bc = BALL_TYPES[p.ballType] || BALL_TYPES.standard;
+  ctx.save();
+  ctx.translate(px(p.x),py(p.y));
+  // Glow ring
+  ctx.globalAlpha = 0.6 + 0.4*Math.sin(frameCount*0.15);
+  ctx.strokeStyle = bc.color; ctx.lineWidth = 2;
+  ctx.shadowColor = bc.glow; ctx.shadowBlur = 10;
+  ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.stroke();
+  ctx.shadowBlur = 0;
+  // Ball
+  ctx.fillStyle = bc.color;
+  ctx.beginPath(); ctx.arc(0,0,7,0,Math.PI*2); ctx.fill();
+  // Label
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 6px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  var abbr = p.ballType.slice(0,3).toUpperCase();
+  ctx.fillText(abbr,0,0);
+  ctx.restore();
+}
+
+/* =========================================================
+   DRAW BONUS TARGET
+========================================================= */
+function drawBonusTarget(bt) {
+  ctx.save();
+  ctx.translate(px(bt.x),py(bt.y));
+  var pulse = 0.8 + 0.2*Math.sin(frameCount*0.2);
+  ctx.globalAlpha = pulse;
+  // Ring
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 3;
+  ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 14;
+  ctx.beginPath(); ctx.arc(0,0,16,0,Math.PI*2); ctx.stroke();
+  ctx.shadowBlur = 0;
+  // Inner disc
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill();
+  // Icon
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 8px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  var icons = {robot:'R', tankCart:'T', droneAssist:'D'};
+  ctx.fillText(icons[bt.powerupType]||'?',0,0);
+  // Flag
+  ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(0,-30); ctx.stroke();
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath(); ctx.moveTo(0,-30); ctx.lineTo(10,-25); ctx.lineTo(0,-20); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+/* =========================================================
+   DRAW HUD
+========================================================= */
+function drawHUD() {
+  var pad = 8, barH = 60;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath(); rr(pad,pad,W-pad*2,barH,7); ctx.fill();
+
+  var fs = Math.max(10,Math.min(13,W/70));
+  ctx.font = 'bold '+fs+'px Arial';
+  ctx.textBaseline = 'middle';
+
+  // HP bar
+  ctx.fillStyle = '#44ff88'; ctx.textAlign='left';
+  ctx.fillText('HP', pad+10, pad+20);
+  var hpW = 80, hpF = (gs.hp/gs.maxHp)*hpW;
+  ctx.fillStyle = '#333'; ctx.fillRect(pad+30,pad+13,hpW,10);
+  ctx.fillStyle = gs.hp > 50 ? '#44ff44' : gs.hp > 25 ? '#ffaa00' : '#ff3333';
+  ctx.fillRect(pad+30,pad+13,Math.max(0,hpF),10);
+
+  // Score
+  ctx.fillStyle = '#ffd700'; ctx.shadowColor='#ffd700'; ctx.shadowBlur=4;
+  ctx.textAlign='center'; ctx.fillText('* '+gs.score.toLocaleString(), W/2, pad+20);
+  ctx.shadowBlur=0;
+
+  // Wave
+  ctx.fillStyle = '#ffaa44'; ctx.textAlign='right';
+  ctx.fillText('WAVE '+gs.wave, W-pad-10, pad+20);
+
+  var fs2 = Math.max(9,Math.min(11,W/82));
+  ctx.font = 'bold '+fs2+'px Arial';
+
+  // Current ball type
+  if (gs.currentBall !== 'standard') {
+    var bc = BALL_TYPES[gs.currentBall];
+    ctx.fillStyle = bc.color; ctx.shadowColor=bc.glow; ctx.shadowBlur=6;
+    ctx.textAlign='left';
+    var timeLeft = gs.ballTimer > 0 ? Math.ceil(gs.ballTimer/60)+'s' : '';
+    ctx.fillText(bc.name+' '+timeLeft, pad+10, pad+46);
+    ctx.shadowBlur=0;
+  } else {
+    ctx.fillStyle='#aaffcc'; ctx.textAlign='left';
+    ctx.fillText(gs.kills+' KILLS', pad+10, pad+46);
+  }
+
+  // Boss countdown
+  var tSince = (Date.now() - gs.lastBossTime)/1000;
+  var nb = Math.max(0, 60 - tSince);
+  ctx.fillStyle = nb<10 ? '#ff4444' : '#ffaa44'; ctx.textAlign='right';
+  if (gs.kingSpawned) {
+    ctx.fillText('BOSS INCOMING!', W-pad-10, pad+46);
+  } else {
+    ctx.fillText('BOSS in '+Math.ceil(nb)+'s', W-pad-10, pad+46);
+  }
+
+  // Kills center
+  ctx.fillStyle='#cc88ff'; ctx.textAlign='center';
+  ctx.fillText(gs.bossKills+' BOSSES SLAIN', W/2, pad+46);
+}
+
+/* =========================================================
+   SPAWN & UPDATE ZOMBIES
+========================================================= */
+function spawnZombie() {
+  var types = ['green','green','green','pink','blue','orange'];
+  var typeWeights = [0.55, 0.55, 0.55, 0.15, 0.1, 0.1];
+  var r = Math.random();
+  var csum = 0, chosenType = 'green';
+  for (var i=0;i<types.length;i++) {
+    csum += typeWeights[i]/1.65;
+    if (r < csum) { chosenType=types[i]; break; }
+  }
+  var hpMult = Math.min(gs.zombieHpMult||1, 6);
+  var zHp = Math.round((chosenType!=='green'?2:1)*hpMult*10);
+  // Spawn from far end or holes
+  var zx = Math.random()*W;
+  var zy = H*0.53 + Math.random()*H*0.04;
+  gs.zombies.push({
+    x:zx, y:zy,
+    hp:zHp, maxHp:zHp,
+    dmg:chosenType!=='green'?15:5,
+    speed:0.35+Math.random()*0.25+(gs.wave-1)*0.04,
+    type:chosenType,
+    swerve:(Math.random()-0.5)*0.04,
+    swerveT:Math.random()*Math.PI*2
+  });
+}
+
+function spawnBoss() {
+  var hp = 200 * Math.pow(2, gs.wave-1);
+  gs.bosses.push({
+    x:W*0.1+Math.random()*W*0.8,
+    y:H*0.52,
+    hp:hp, maxHp:hp,
+    speed:0.18+(gs.wave-1)*0.03,
+    type:'boss',
+    immune:true
+  });
+  gs.kingSpawned = true;
+}
+
+function spawnHole() {
+  var hx = W*0.1+Math.random()*W*0.8;
+  var hy = H*0.54+Math.random()*H*0.24;
+  gs.holes.push({x:hx,y:hy,life:300,r:12,spawnTimer:0});
+  addFloat(hx,hy-20,'GROUND HOLE!','#ff4400',true);
+}
+
+/* =========================================================
+   FIRE BALL AT DRONE POSITION
+========================================================= */
+function fireBall(ballType) {
+  ballType = ballType || gs.currentBall;
+  var tx = gs.droneX, ty = gs.droneY;
+  var bc = BALL_TYPES[ballType];
+  sfxSwing();
+  setTimeout(sfxBallHit, 200);
+
+  if (ballType==='multi') {
+    // 5-way wide spread
+    for (var i=0;i<5;i++) {
+      var angle = (i-2)*0.55;
+      var spread = 180;
+      gs.ballFlights.push({
+        tx: tx + Math.sin(angle)*spread,
+        ty: ty + Math.cos(angle)*spread*0.25,
+        t:0, ballType:'multi',
+        dmg:bc.dmg, area:bc.area
+      });
+    }
+  } else {
+    gs.ballFlights.push({tx,ty,t:0,ballType,dmg:bc.dmg,area:bc.area});
+  }
+}
+
+/* =========================================================
+   BALL HIT DETECTION
+========================================================= */
+function resolveBallHit(bf) {
+  var tx=bf.tx, ty=bf.ty;
+  var area=bf.area;
+  var dmg=bf.dmg;
+  var ballType=bf.ballType;
+  var scored = false;
+
+  // Check holes — score in the hole = bonus grenade!
+  gs.holes = gs.holes.filter(function(h) {
+    if (dist(tx,ty,h.x,h.y) < h.r + 10) {
+      gs.grenades++;
+      updateGrenadeBtn();
+      sfxPickup();
+      spawnParticles(h.x,h.y,'#ffcc00',16);
+      addFloat(h.x,h.y-20,'HOLE IN ONE! +GRENADE','#ffcc00',true);
+      scored = true;
+      return false; // hole closes after scoring
+    }
+    return true;
+  });
+
+  // Check bonus targets
+  gs.bonusTargets = gs.bonusTargets.filter(function(bt) {
+    if (dist(tx,ty,bt.x,bt.y) < area + 20) {
+      awardPowerup(bt.powerupType);
+      spawnParticles(bt.x,bt.y,'#ffd700',20);
+      addFloat(bt.x,bt.y-20,'BONUS! '+bt.powerupType.toUpperCase(),'#ffd700',true);
+      scored = true;
+      return false;
+    }
+    return true;
+  });
+
+  // Check ball pickups (if ball passes through)
+  gs.ballPickups = gs.ballPickups.filter(function(p) {
+    if (dist(tx,ty,p.x,p.y) < 25) {
+      activateBallType(p.ballType);
+      sfxPickup();
+      return false;
+    }
+    return true;
+  });
+
+  // Laser goes through all zombies in line
+  if (ballType==='laser') {
+    var gx=gs.golferX, gy=gs.golferY-20;
+    gs.zombies.forEach(function(z) {
+      // Check if zombie is near the laser line
+      var dx=tx-gx, dy=ty-gy;
+      var len=Math.sqrt(dx*dx+dy*dy)||1;
+      var t2=((z.x-gx)*dx+(z.y-gy)*dy)/(len*len);
+      if (t2>=0&&t2<=1) {
+        var cx2=gx+t2*dx, cy2=gy+t2*dy;
+        if (dist(cx2,cy2,z.x,z.y)<20) {
+          hitZombie(z,dmg);
+          sfxLaser();
+        }
+      }
+    });
+    gs.bosses.forEach(function(b) {
+      var dx=tx-gx, dy=ty-gy;
+      var len=Math.sqrt(dx*dx+dy*dy)||1;
+      var t2=((b.x-gx)*dx+(b.y-gy)*dy)/(len*len);
+      if (t2>=0&&t2<=1) {
+        var cx2=gx+t2*dx, cy2=gy+t2*dy;
+        if (dist(cx2,cy2,b.x,b.y)<40) hitZombie(b,dmg);
+      }
+    });
+    scored = true;
+  } else {
+    // Area hit
+    var anyHit = false;
+    gs.zombies.forEach(function(z) {
+      if (dist(tx,ty,z.x,z.y)<area) {
+        hitZombie(z,dmg);
+        anyHit = true;
+        if (ballType==='gasoline') sfxFlame();
+      }
+    });
+    gs.bosses.forEach(function(b) {
+      if (dist(tx,ty,b.x,b.y)<area+20) {
+        hitZombie(b,dmg);
+        anyHit = true;
+      }
+    });
+    if (anyHit) scored = true;
+  }
+
+  // Gasoline: spawn fire patches
+  if (ballType==='gasoline') {
+    for (var fi=0;fi<5;fi++) {
+      var fangle=Math.random()*Math.PI*2;
+      var fr=Math.random()*area*0.6;
+      gs.particles.push({
+        x:tx+Math.cos(fangle)*fr, y:ty+Math.sin(fangle)*fr,
+        vx:0, vy:-0.5, r:12+Math.random()*8,
+        color:'#ff6600', life:1, decay:0.012, isFlame:true
+      });
+    }
+  }
+
+  // Grenade: big explosion
+  if (ballType==='grenade') {
+    spawnParticles(tx,ty,'#ff6600',30);
+    spawnParticles(tx,ty,'#ffff00',20);
+    sfxExplosion();
+    addFloat(tx,ty-20,'FORE! BOOM!','#ff6600',true);
+  }
+
+  // Score
+  if (scored) {
+    gs.score += 100;
+  }
+
+  // Miss - land ball on range
+  if (!scored) {
+    var lx=tx+rnd(-20,20), ly=Math.min(ty,H*0.85);
+    gs.particles.push({x:lx,y:ly,vx:0,vy:0,r:3,color:'#fff',life:0.4,decay:0.02});
+  }
+
+  spawnParticles(tx,ty,'#88ff44',6);
+}
+
+function hitZombie(z, dmg) {
+  z.hp -= dmg;
+  spawnParticles(z.x,z.y,'#88ff44',4);
+}
+
+/* =========================================================
+   ACTIVATE BALL TYPE
+========================================================= */
+function activateBallType(type) {
+  gs.currentBall = type;
+  gs.ballTimer = 600; // 10 seconds
+  var bc = BALL_TYPES[type];
+  addFloat(W/2,H*0.3,bc.name+' ACTIVATED!',bc.color,true);
+}
+
+/* =========================================================
+   AWARD POWERUP
+========================================================= */
+function awardPowerup(type) {
+  if (type==='robot') {
+    gs.robot = {x:W*0.5+rnd(-60,60),y:H*0.6,hp:300,maxHp:300,alive:true,fireTimer:0};
+    addFloat(W/2,H*0.3,'ROBOT DEPLOYED!','#44aaff',true);
+  } else if (type==='tankCart') {
+    gs.tankCart = {x:W*0.5,y:H*0.7,hp:500,maxHp:500,alive:true,fireTimer:0,speed:1.5,angle:0};
+    addFloat(W/2,H*0.3,'TANK CART ONLINE!','#ffcc00',true);
+  } else if (type==='droneAssist') {
+    gs.droneAssist = {x:W*0.5,y:H*0.35,hp:200,maxHp:200,alive:true,fireTimer:0};
+    addFloat(W/2,H*0.3,'DRONE ASSIST ACTIVE!','#00ff88',true);
+  }
+}
+
+/* =========================================================
+   LAUNCH CART
+========================================================= */
+function launchCart(cart) {
+  if (cart.launched || !cart.active) return;
+  cart.launched = true;
+  var cx=W/2, cy=H*0.72;
+  var dx=cx-cart.x, dy=cy-cart.y;
+  var len=Math.sqrt(dx*dx+dy*dy)||1;
+  cart.vx=(dx/len)*4;
+  cart.vy=(dy/len)*4;
+  cart.targetX=cx; cart.targetY=cy;
+  addFloat(cart.x,cart.y-20,'CART DEPLOYED!','#ff4400',true);
+  sfxCartKamikaze();
+}
+
+/* =========================================================
+   GRENADE BALL
+========================================================= */
+function fireGrenadeBall() {
+  if (!gs || gs.grenades<=0) return;
+  gs.grenades--;
+  updateGrenadeBtn();
+  gs.ballFlights.push({
+    tx:gs.droneX, ty:gs.droneY,
+    t:0, ballType:'grenade',
+    dmg:BALL_TYPES.grenade.dmg, area:BALL_TYPES.grenade.area
+  });
+}
+
+function updateGrenadeBtn() {
+  var btn=document.getElementById('grenadeBtn');
+  if (!gs||gs.gameOver){btn.style.display='none';return;}
+  btn.style.display='flex';
+  var lbl=document.getElementById('grenadeBtnLabel');
+  if (gs.grenades>0) {
+    btn.className='ready';
+    if(lbl) lbl.textContent='x'+gs.grenades;
+  } else {
+    btn.className='locked';
+    var needed=gs.grenadeThreshold-gs.score;
+    if(lbl) lbl.textContent=(needed>=1000?Math.ceil(needed/1000)+'k':needed);
+  }
+}
+
+document.getElementById('grenadeBtn').addEventListener('click',function(e){e.stopPropagation();fireGrenadeBall();});
+document.getElementById('grenadeBtn').addEventListener('touchend',function(e){e.stopPropagation();e.preventDefault();fireGrenadeBall();},{passive:false});
+
+/* =========================================================
+   UPDATE
+========================================================= */
+function update() {
+  if (!gs||!gs.running||gs.gameOver) return;
+  var now=Date.now();
+  gs.elapsed+=1/60;
+  gs.frame++;
+  frameCount++;
+
+  // Ball timer
+  if (gs.ballTimer>0) {
+    gs.ballTimer--;
+    if (gs.ballTimer===0) {
+      gs.currentBall='standard';
+      addFloat(W/2,H*0.4,'STANDARD BALLS','#aaffcc',false);
+    }
+  }
+
+  // Grenade award
+  if (gs.score>=gs.grenadeThreshold) {
+    gs.grenades++;
+    gs.grenadeThreshold+=8000;
+    addFloat(W/2,H*0.4,'GRENADE BALL READY!','#ffcc00',true);
+    updateGrenadeBtn();
+  }
+
+  // Spawn zombies
+  var now2=Date.now();
+  if (now2-gs.lastZombieTime>3000 && !gs.kingDefeated) {
+    var wave=Math.floor(gs.elapsed/8);
+    var count=Math.min(wave+1,5);
+    count=Math.max(1,count);
+    for (var zw=0;zw<count;zw++) spawnZombie();
+    gs.lastZombieTime=now2;
+  }
+
+  // Spawn holes
+  if (now2-gs.lastHoleTime>12000) {
+    spawnHole();
+    gs.lastHoleTime=now2;
+  }
+  gs.holes=gs.holes.filter(function(h){h.life--;return h.life>0;});
+
+  // Boss spawn at 60s
+  if (!gs.survivalMode && gs.elapsed>=60 && gs.kingsKilled===0 && !gs.kingSpawned && !gs.kingDefeated) {
+    var toSpawn=gs.kingsRequired||1;
+    for (var ki=0;ki<toSpawn;ki++) spawnBoss();
+    gs.lastBossTime=now2;
+    addFloat(W/2,H*0.35,'KING ZOMBIE INCOMING!','#ffd700',true);
+  }
+
+  // Ball pickups spawn from shirt zombies dying
+  if (now2-gs.lastPickupTime>10000 && gs.kills>3) {
+    gs.lastPickupTime=now2;
+    var pTypes=['multi','laser','gasoline'];
+    gs.ballPickups.push({
+      x:W*0.1+Math.random()*W*0.8,
+      y:H*0.55+Math.random()*H*0.15,
+      ballType:pTypes[Math.floor(Math.random()*pTypes.length)],
+      life:400
+    });
+  }
+  gs.ballPickups=gs.ballPickups.filter(function(p){p.life--;return p.life>0;});
+
+  // Bonus targets
+  gs.nextBonusTarget--;
+  if (gs.nextBonusTarget<=0) {
+    gs.nextBonusTarget=900+Math.random()*600;
+    var ptypes=['robot','tankCart','droneAssist'];
+    var px2=W*0.15+Math.random()*W*0.7;
+    var py2=H*0.54+Math.random()*H*0.18;
+    gs.bonusTargets.push({x:px2,y:py2,powerupType:ptypes[Math.floor(Math.random()*ptypes.length)],life:600});
+  }
+  gs.bonusTargets=gs.bonusTargets.filter(function(bt){bt.life--;return bt.life>0;});
+
+  // Update ball flights
+  gs.ballFlights=gs.ballFlights.filter(function(bf){
+    bf.t+=0.028;
+    if (bf.t>=1) {
+      resolveBallHit(bf);
+      return false;
+    }
+    return true;
+  });
+
+  // Update zombies
+  var golferY=H*0.86;
+  var zKill=[];
+  gs.zombies.forEach(function(z,zi) {
+    z.y+=z.speed;
+    z.swerveT=(z.swerveT||0)+0.04;
+    z.x+=Math.sin(z.swerveT)*1.2;
+    z.x=Math.max(0,Math.min(W,z.x));
+
+    // Check if dead
+    if (z.hp<=0) { zKill.push(zi); return; }
+
+    // Sniper hits
+    gs.snipers.forEach(function(sn){
+      if (!sn.alive) return;
+      if (dist(z.x,z.y,sn.x,sn.y)<30) {
+        sn.alive=false;
+        spawnParticles(sn.x,sn.y,'#ff4400',14);
+        addFloat(sn.x,sn.y-20,'SNIPER DOWN!','#ff2200',true);
+      }
+    });
+
+    // Reached golfer
+    if (z.y>=golferY-20) {
+      z.y=H*0.54;
+      z.x=Math.random()*W;
+      gs.hp=Math.max(0,gs.hp-z.dmg);
+      spawnParticles(gs.golferX,golferY,'#ff4444',8);
+      addFloat(gs.golferX,golferY-30,'-'+z.dmg+' HP','#ff4444',false);
+
+      // Try to launch a cart first
+      var cartLaunched=false;
+      for (var ci=0;ci<gs.carts.length;ci++) {
+        if (gs.carts[ci].active&&!gs.carts[ci].launched&&!gs.carts[ci].burning) {
+          launchCart(gs.carts[ci]);
+          cartLaunched=true;
+          break;
+        }
+      }
+
+      if (gs.hp<=0) { triggerGameOver(); return; }
+    }
+  });
+  // Kill zombies and award drops
+  zKill.reverse().forEach(function(zi){
+    var z=gs.zombies[zi];
+    var pts = z.type!=='green'?150:100;
+    gs.score+=pts;
+    gs.kills++;
+    spawnParticles(z.x,z.y,'#44ff88',6);
+    addFloat(z.x,z.y,'+'+pts,'#ffe044',false);
+    sfxZombieDie();
+    // Colored shirt drops special ball pickup
+    if (z.type==='pink'&&Math.random()<0.5) gs.ballPickups.push({x:z.x,y:z.y,ballType:'multi',life:300});
+    if (z.type==='blue'&&Math.random()<0.5) gs.ballPickups.push({x:z.x,y:z.y,ballType:'laser',life:300});
+    if (z.type==='orange'&&Math.random()<0.5) gs.ballPickups.push({x:z.x,y:z.y,ballType:'gasoline',life:300});
+    gs.zombies.splice(zi,1);
+  });
+
+  // Update bosses
+  var bossKill=[];
+  gs.bosses.forEach(function(b,bi){
+    b.y+=b.speed;
+    if (b.hp<=0){bossKill.push(bi);return;}
+    if (b.y>=golferY-20) {
+      b.y=H*0.54; b.x=Math.random()*W;
+      gs.hp=Math.max(0,gs.hp-30);
+      spawnParticles(gs.golferX,golferY,'#ff0000',14);
+      addFloat(gs.golferX,golferY-30,'-30 HP','#ff2222',true);
+      if (gs.hp<=0){triggerGameOver();return;}
+    }
+  });
+  bossKill.reverse().forEach(function(bi){
+    var b=gs.bosses[bi];
+    gs.score+=2000; gs.bossKills++; gs.kingsKilled++;
+    spawnParticles(b.x,b.y,'#ffd700',20);
+    addFloat(b.x,b.y,'+2000 KING SLAIN!','#ffd700',true);
+    sfxBossDie();
+    gs.bosses.splice(bi,1);
+    gs.lastBossTime=Date.now();
+    if (!gs.kingDefeated&&gs.bosses.length===0) {
+      gs.kingSpawned=false;
+      gs.kingDefeated=true;
+      gs.clearingZombies=true;
+      // Spawn final horde
+      for (var fh=0;fh<30;fh++) spawnZombie();
+      addFloat(W/2,H*0.4,'FINAL HORDE! FORE THEM ALL!','#ff4400',true);
+    }
+  });
+
+  // Clearing phase
+  if (gs.kingDefeated&&gs.clearingZombies) {
+    gs.clearFlashTimer=(gs.clearFlashTimer||0)+1;
+    if (gs.zombies.length===0&&gs.bosses.length===0) {
+      gs.clearingZombies=false;
+      // Advance wave
+      gs.wave++;
+      gs.zombieHpMult=Math.min(1+gs.wave*0.3,5);
+      gs.kingsRequired=Math.min(gs.wave,4);
+      gs.kingDefeated=false;
+      gs.kingSpawned=false;
+      gs.kingsKilled=0;
+      gs.elapsed=0;
+      gs.lastBossTime=Date.now();
+      // Title card
+      var waveNames=['','The First Wave','The Rising Dead','Blood on the Green','The King\'s Army','Apocalypse Golf','Monster Drive','The Final Fore'];
+      var waveLine=waveNames[Math.min(gs.wave,waveNames.length-1)]||'Wave '+gs.wave;
+      gs.titleCard={text:'WAVE '+gs.wave,subtext:waveLine.toUpperCase(),timer:180};
+    }
+  }
+
+  // Snipers auto-fire
+  gs.snipers.forEach(function(sn){
+    if (!sn.alive) return;
+    sn.fireTimer++;
+    var rate=Math.max(20,60-sn.level*8);
+    if (sn.fireTimer>=rate) {
+      sn.fireTimer=0;
+      var all=gs.zombies.concat(gs.bosses);
+      var closest=null,bestD=99999;
+      all.forEach(function(z){
+        var d=dist(z.x,z.y,sn.x,sn.y);
+        if (d<bestD&&d<300){bestD=d;closest=z;}
+      });
+      if (closest) {
+        hitZombie(closest,8*sn.level);
+        gs.particles.push({x:sn.x,y:sn.y,vx:(closest.x-sn.x)*0.1,vy:(closest.y-sn.y)*0.1,r:2,color:'#ffee44',life:0.5,decay:0.06});
+        sfxSwing();
+      }
+    }
+  });
+
+  // Cart kamikaze update
+  gs.carts.forEach(function(cart){
+    if (!cart.active) return;
+    if (cart.burning) {
+      cart.burnTimer--;
+      // Attract and damage zombies
+      gs.zombies.forEach(function(z){
+        var dx=cart.x-z.x,dy=cart.y-z.y;
+        var d=Math.sqrt(dx*dx+dy*dy)||1;
+        if (d<200) { z.x+=(dx/d)*1.5; z.y+=(dy/d)*1.5; }
+        if (d<50) hitZombie(z,5);
+      });
+      gs.bosses.forEach(function(b){
+        var dx=cart.x-b.x,dy=cart.y-b.y;
+        var d=Math.sqrt(dx*dx+dy*dy)||1;
+        if (d<60) b.hp-=5;
+      });
+      cart.fadeAlpha=(cart.burnTimer/180);
+      if (cart.burnTimer<=0||cart.fadeAlpha<=0) cart.active=false;
+      return;
+    }
+    if (!cart.launched) {
+      // Auto-launch if zombie gets close
+      gs.zombies.forEach(function(z){
+        if (dist(z.x,z.y,cart.x,cart.y)<80&&!cart.launched) launchCart(cart);
+      });
+      return;
+    }
+    // Move to target
+    var remX=cart.targetX-cart.x, remY=cart.targetY-cart.y;
+    if (Math.abs(remX)<6&&Math.abs(remY)<6) {
+      cart.vx=0; cart.vy=0;
+      cart.x=cart.targetX; cart.y=cart.targetY;
+      // At center, start burning
+      cart.burning=true;
+      cart.burnTimer=180;
+      spawnParticles(cart.x,cart.y,'#ff6600',20);
+      addFloat(cart.x,cart.y-20,'CART IGNITED!','#ff4400',true);
+      sfxExplosion();
+    } else {
+      cart.x+=cart.vx; cart.y+=cart.vy;
+    }
+  });
+
+  // Robot powerup
+  if (gs.robot&&gs.robot.alive) {
+    var rb=gs.robot;
+    rb.fireTimer++;
+    if (rb.fireTimer>=45) {
+      rb.fireTimer=0;
+      var allZ=gs.zombies.concat(gs.bosses);
+      var rbTarget=null,rbBest=99999;
+      allZ.forEach(function(z){var d=dist(z.x,z.y,rb.x,rb.y);if(d<rbBest){rbBest=d;rbTarget=z;}});
+      if (rbTarget) {
+        hitZombie(rbTarget,15);
+        spawnParticles(rbTarget.x,rbTarget.y,'#44aaff',5);
+        sfxLaser();
+      }
+    }
+    // Wander toward zombies
+    var rbNearest=null,rbND=99999;
+    gs.zombies.forEach(function(z){var d=dist(z.x,z.y,rb.x,rb.y);if(d<rbND){rbND=d;rbNearest=z;}});
+    if (rbNearest&&rbND>60) {
+      var rdx=rbNearest.x-rb.x,rdy=rbNearest.y-rb.y,rdl=Math.sqrt(rdx*rdx+rdy*rdy)||1;
+      rb.x+=rdx/rdl*1.2; rb.y+=rdy/rdl*1.2;
+    }
+    gs.zombies.forEach(function(z){if(dist(z.x,z.y,rb.x,rb.y)<25)hitZombie(z,1);});
+    if (rb.hp<=0){rb.alive=false;addFloat(rb.x,rb.y-30,'ROBOT DOWN!','#44aaff',true);}
+  }
+
+  // Tank cart powerup
+  if (gs.tankCart&&gs.tankCart.alive) {
+    var tk=gs.tankCart;
+    tk.fireTimer++;
+    if (tk.fireTimer>=300) {
+      tk.fireTimer=0;
+      var tkBurst=100;
+      gs.zombies.forEach(function(z){if(dist(z.x,z.y,tk.x,tk.y)<tkBurst)hitZombie(z,40);});
+      gs.bosses.forEach(function(b){if(dist(b.x,b.y,tk.x,tk.y)<tkBurst+20)b.hp-=40;});
+      spawnParticles(tk.x,tk.y,'#ffcc00',16);
+      addFloat(tk.x,tk.y-30,'CANNON!','#ffcc00',true);
+      sfxExplosion();
+    }
+    var tkNearest=null,tkND=99999;
+    gs.zombies.forEach(function(z){var d=dist(z.x,z.y,tk.x,tk.y);if(d<tkND){tkND=d;tkNearest=z;}});
+    if (tkNearest&&tkND>50) {
+      var tkdx=tkNearest.x-tk.x,tkdy=tkNearest.y-tk.y,tkl=Math.sqrt(tkdx*tkdx+tkdy*tkdy)||1;
+      tk.angle=Math.atan2(tkdy,tkdx);
+      tk.x+=tkdx/tkl*tk.speed; tk.y+=tkdy/tkl*tk.speed;
+    }
+    gs.zombies=gs.zombies.filter(function(z){
+      if(dist(z.x,z.y,tk.x,tk.y)<32){tk.hp-=5;hitZombie(z,30);if(z.hp<=0){gs.kills++;gs.score+=120;return false;}return true;}
+      return true;
+    });
+    if (tk.hp<=0){tk.alive=false;addFloat(W/2,H*0.4,'TANK CART DESTROYED!','#ff4400',true);}
+  }
+
+  // Drone assist
+  if (gs.droneAssist&&gs.droneAssist.alive) {
+    var da=gs.droneAssist;
+    da.fireTimer++;
+    if (da.fireTimer>=30) {
+      da.fireTimer=0;
+      var allZD=gs.zombies.concat(gs.bosses);
+      var daT=null,daD=99999;
+      allZD.forEach(function(z){var d=dist(z.x,z.y,da.x,da.y);if(d<daD){daD=d;daT=z;}});
+      if (daT) {
+        hitZombie(daT,10);
+        spawnParticles(daT.x,daT.y,'#00ff88',3);
+        sfxMachineGun();
+      }
+    }
+    da.hp-=0.02;
+    if (da.hp<=0){da.alive=false;addFloat(da.x,da.y-30,'DRONE ASSIST DOWN!','#00ff88',true);}
+  }
+
+  // Particles
+  gs.particles=gs.particles.filter(function(p){
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.05;
+    if (p.isFlame) {
+      // Flame particles damage zombies
+      gs.zombies.forEach(function(z){if(dist(p.x,p.y,z.x,z.y)<p.r+8)hitZombie(z,0.3);});
+    }
+    p.life-=p.decay; return p.life>0;
+  });
+
+  // Floats
+  gs.floats=gs.floats.filter(function(f){f.y+=f.vy;f.alpha-=0.015;return f.alpha>0;});
+
+  // Lightning
+  gs.lightningStrikes=gs.lightningStrikes.filter(function(ls){ls.life--;return ls.life>0;});
+
+  // Title card
+  if (gs.titleCard) {
+    gs.titleCard.timer--;
+    if (gs.titleCard.timer<=0) gs.titleCard=null;
+  }
+
+  // Auto-aim drone to closest zombie to golfer when not dragging
+  if (!gs.droneDragging) {
+    var allTargets = gs.zombies.concat(gs.bosses);
+    var closest = null, closestD = 99999;
+    allTargets.forEach(function(z) {
+      var d = dist(z.x, z.y, gs.golferX, gs.golferY);
+      if (d < closestD) { closestD = d; closest = z; }
+    });
+    if (closest) {
+      // Smoothly move drone toward closest zombie
+      gs.droneX += (closest.x - gs.droneX) * 0.12;
+      gs.droneY += (closest.y - gs.droneY) * 0.12;
+      gs.droneX = Math.max(W*0.05, Math.min(W*0.95, gs.droneX));
+      gs.droneY = Math.max(H*0.52, Math.min(H*0.78, gs.droneY));
+    }
+  }
+
+  // Swing animation
+  if (gs.swingState==='windup') {
+    gs.swingT+=0.25;
+    if (gs.swingT>=1) { gs.swingState='swing'; gs.swingT=0; fireBall(); }
+  } else if (gs.swingState==='swing') {
+    gs.swingT+=0.3;
+    if (gs.swingT>=1) { gs.swingState='idle'; gs.swingT=0; }
+  }
+
+  updateGrenadeBtn();
+}
+
+/* =========================================================
+   DRAW
+========================================================= */
+function draw() {
+  if (!gs) return;
+
+  // Background
+  drawRange();
+
+  // Holes in ground
+  gs.holes.forEach(function(h){
+    ctx.save();
+    ctx.globalAlpha=Math.min(1,h.life/60);
+    ctx.fillStyle='#111';
+    ctx.beginPath(); ctx.ellipse(px(h.x),py(h.y),h.r,h.r*0.5,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#333'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(px(h.x),py(h.y),h.r,h.r*0.5,0,0,Math.PI*2); ctx.stroke();
+    // Smoke
+    ctx.globalAlpha=0.4*Math.min(1,h.life/60);
+    ctx.fillStyle='#555';
+    ctx.beginPath(); ctx.arc(px(h.x),py(h.y-8+Math.sin(frameCount*0.1)*3),5,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  // Bonus targets
+  gs.bonusTargets.forEach(drawBonusTarget);
+
+  // Ball pickups
+  gs.ballPickups.forEach(drawBallPickup);
+
+  // Snipers
+  gs.snipers.forEach(drawSniper);
+
+  // Golf carts
+  gs.carts.forEach(drawGolfCart);
+
+  // Zombie balls in flight
+  gs.ballFlights.forEach(drawBallFlight);
+
+  // Flame particles (under zombies)
+  gs.particles.forEach(function(p){
+    if (!p.isFlame) return;
+    ctx.save();
+    ctx.globalAlpha=p.life*0.8;
+    ctx.fillStyle='rgba(255,80,0,0.5)';
+    ctx.beginPath(); ctx.ellipse(px(p.x),py(p.y),p.r*1.2,p.r*0.6,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=p.life>0.5?'#ffee44':'#ff6600';
+    ctx.beginPath(); ctx.ellipse(px(p.x),py(p.y),p.r*0.6,p.r*0.3,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  // Zombies
+  gs.zombies.forEach(function(z){
+    drawZombie(z.x,z.y,0.9,z.hp,z.maxHp,z.type);
+  });
+
+  // Bosses
+  gs.bosses.forEach(function(b){
+    var immune=b.immune&&b.y<H*0.25;
+    drawZombie(b.x,b.y,2.2,b.hp,b.maxHp,'boss',immune);
+    if (immune) {
+      ctx.save(); ctx.fillStyle='rgba(180,180,255,0.55)';
+      ctx.font='bold 10px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('IMMUNE',b.x,b.y-90); ctx.restore();
+    }
+    ctx.fillStyle='#fff'; ctx.font='bold 9px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(Math.ceil(b.hp)+'/'+b.maxHp,b.x,b.y-96);
+  });
+
+  // Robot
+  if (gs.robot&&gs.robot.alive) {
+    var rb=gs.robot;
+    ctx.save(); ctx.translate(px(rb.x),py(rb.y));
+    ctx.strokeStyle='#44aaff'; ctx.lineWidth=3; ctx.shadowColor='#44aaff'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.moveTo(-10,0); ctx.lineTo(-14,20); ctx.moveTo(10,0); ctx.lineTo(14,20); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-8,-8); ctx.lineTo(-20,4); ctx.moveTo(8,-8); ctx.lineTo(20,4); ctx.stroke();
+    ctx.fillStyle='rgba(68,170,255,0.18)';
+    ctx.beginPath(); rr(-10,-20,20,28,3); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0,-26,10,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='rgba(0,255,136,0.8)'; ctx.beginPath(); ctx.ellipse(0,-26,6,4,0,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0; ctx.restore();
+    var bW=36; ctx.fillStyle='#333'; ctx.fillRect(rb.x-18,rb.y+28,bW,4);
+    ctx.fillStyle='#44aaff'; ctx.fillRect(rb.x-18,rb.y+28,(rb.hp/rb.maxHp)*bW,4);
+  }
+
+  // Tank cart
+  if (gs.tankCart&&gs.tankCart.alive) {
+    var tk=gs.tankCart;
+    ctx.save(); ctx.translate(px(tk.x),py(tk.y)); ctx.rotate(tk.angle||0);
+    ctx.fillStyle='#556633'; ctx.strokeStyle='#334422'; ctx.lineWidth=2;
+    ctx.beginPath(); rr(-28,-14,56,28,4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#667744';
+    ctx.beginPath(); ctx.ellipse(4,0,14,12,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#445533'; ctx.fillRect(14,-3,22,6);
+    ctx.fillStyle='#333322';
+    ctx.fillRect(-28,-18,56,6); ctx.fillRect(-28,12,56,6);
+    ctx.restore();
+    var bW2=44; ctx.fillStyle='#333'; ctx.fillRect(tk.x-22,tk.y+20,bW2,4);
+    ctx.fillStyle='#ffcc00'; ctx.fillRect(tk.x-22,tk.y+20,(tk.hp/tk.maxHp)*bW2,4);
+  }
+
+  // Drone assist
+  if (gs.droneAssist&&gs.droneAssist.alive) {
+    var da=gs.droneAssist;
+    // Hover animation
+    var hover=Math.sin(frameCount*0.08)*4;
+    ctx.save(); ctx.translate(px(da.x),py(da.y+hover));
+    ctx.fillStyle='#225533'; ctx.fillRect(-10,-4,20,8);
+    ctx.strokeStyle='#00ff88'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(-16,-10,6,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(16,-10,6,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(-16,10,6,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(16,10,6,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='#114422'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(-10,-4); ctx.lineTo(-16,-10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(10,-4); ctx.lineTo(16,-10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-10,4); ctx.lineTo(-16,10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(10,4); ctx.lineTo(16,10); ctx.stroke();
+    ctx.restore();
+    // HP bar
+    ctx.fillStyle='#00ff88'; ctx.font='bold 8px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('ASSIST',da.x,da.y+hover+22);
+  }
+
+  // Particles
+  gs.particles.forEach(function(p){
+    if (p.isFlame) return;
+    ctx.save(); ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(px(p.x),py(p.y),p.r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  // Draw golfer
+  var sp='address';
+  if (gs.swingState==='windup') sp='windup';
+  else if (gs.swingState==='swing'||gs.swingState==='follow') sp='swing';
+  drawGolfer(gs.golferX,gs.golferY,gs.swingT,sp);
+
+  // Drone crosshair
+  drawDrone(gs.droneX,gs.droneY);
+
+  // Float text
+  gs.floats.forEach(function(f){
+    ctx.save(); ctx.globalAlpha=f.alpha;
+    ctx.fillStyle=f.color; ctx.shadowColor=f.color; ctx.shadowBlur=10;
+    ctx.font=(f.big?'bold 18px':'bold 13px')+' Arial';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(f.text,f.x,f.y);
+    ctx.restore();
+  });
+
+  // Clearing phase flash
+  if (gs.kingDefeated&&gs.clearingZombies) {
+    var pulse=0.12+0.08*Math.sin((gs.clearFlashTimer||0)*0.12);
+    ctx.fillStyle='rgba(255,60,0,'+pulse+')';
+    ctx.fillRect(0,0,W,H);
+    ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#ff4400'; ctx.shadowColor='#ff4400'; ctx.shadowBlur=16;
+    ctx.font='bold 20px Arial Black';
+    ctx.fillText('FORE THEM ALL!',W/2,H*0.42);
+    ctx.shadowBlur=0; ctx.fillStyle='#fff';
+    ctx.font='bold 16px Arial Black';
+    ctx.fillText(gs.zombies.length+' / 30 REMAINING',W/2,H*0.42+34);
+    ctx.restore();
+  }
+
+  // Title card between waves
+  if (gs.titleCard) {
+    var tc=gs.titleCard;
+    var fade=Math.min(1,tc.timer/30)*Math.min(1,(tc.timer)/30);
+    ctx.save(); ctx.globalAlpha=fade;
+    ctx.fillStyle='rgba(0,0,0,0.7)';
+    ctx.fillRect(0,H*0.35,W,H*0.22);
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#ffd700'; ctx.shadowColor='#ffd700'; ctx.shadowBlur=20;
+    ctx.font='bold 28px Arial Black';
+    ctx.fillText(tc.text,W/2,H*0.42);
+    ctx.shadowBlur=0; ctx.fillStyle='rgba(255,220,100,0.8)';
+    ctx.font='bold 14px Arial Black';
+    ctx.fillText(tc.subtext,W/2,H*0.50);
+    ctx.restore();
+  }
+
+  // HUD
+  drawHUD();
+}
+
+/* =========================================================
+   TITLE SCREEN
+========================================================= */
+function drawTitle() {
+  // Nice range background
+  drawRange();
+  // Dark overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0,0,W,H);
+
+  // Title
+  ctx.save();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  var fs=Math.min(W*0.12,54);
+  ctx.font='900 '+fs+'px Arial Black,Arial,sans-serif';
+  ctx.shadowColor='rgba(0,200,100,0.95)'; ctx.shadowBlur=28;
+  ctx.fillStyle='#004400';
+  ctx.fillText('FORE THE',W/2+4,H*0.22+4);
+  ctx.fillText('APOCALYPSE',W/2+4,H*0.22+fs*1.2+4);
+  ctx.fillStyle='#00ff44';
+  ctx.shadowColor='rgba(0,255,100,0.9)'; ctx.shadowBlur=22;
+  ctx.fillText('FORE THE',W/2,H*0.22);
+  ctx.fillText('APOCALYPSE',W/2,H*0.22+fs*1.2);
+  ctx.shadowBlur=0;
+
+  // Subtitle
+  ctx.font='bold 13px Arial';
+  ctx.fillStyle='rgba(200,255,200,0.7)';
+  ctx.fillText('Starring Colin "Monster" Johnson',W/2,H*0.22+fs*2.6);
+
+  // Golfer teaser at bottom
+  drawGolfer(W/2,H*0.84,0,'address');
+
+  // Zombie silhouettes approaching
+  var numZ=5;
+  for (var i=0;i<numZ;i++) {
+    var zx=W*(0.1+i*0.2);
+    var zy=H*0.6+Math.sin(frameCount*0.04+i)*5;
+    drawZombie(zx,zy,0.8,1,1,'green');
+  }
+
+  // Instruction panel
+  ctx.fillStyle='rgba(0,20,0,0.88)';
+  ctx.strokeStyle='rgba(0,255,100,0.4)'; ctx.lineWidth=2;
+  ctx.beginPath(); rr(W*0.1,H*0.60,W*0.8,H*0.28,10); ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle='#44ff88';
+  ctx.font='bold 12px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('HOW TO PLAY',W/2,H*0.64);
+  ctx.fillStyle='rgba(200,255,200,0.75)';
+  ctx.font='10px Arial';
+  ctx.fillText('DRAG anywhere = move DRONE aimer',W/2,H*0.68);
+  ctx.fillText('TAP golfer zone = SWING',W/2,H*0.72);
+  ctx.fillText('Defeat colored shirt zombies for BALL UPGRADES',W/2,H*0.76);
+  ctx.fillText('Hit GOLD targets for BONUS POWERUPS',W/2,H*0.80);
+
+  // Start prompt
+  var blink=Math.floor(frameCount/20)%2;
+  if (blink) {
+    ctx.fillStyle='#ffd700'; ctx.shadowColor='#ffd700'; ctx.shadowBlur=12;
+    ctx.font='bold 14px Arial Black';
+    ctx.fillText('TAP TO START',W/2,H*0.92);
+    ctx.shadowBlur=0;
+  }
+
+  ctx.restore();
+  frameCount++;
+}
+
+/* =========================================================
+   GAME OVER / VICTORY
+========================================================= */
+function triggerGameOver() {
+  gs.gameOver=true; gs.running=false;
+  gameMode='gameover';
+  document.getElementById('grenadeBtn').style.display='none';
+  document.getElementById('cogBtn').style.display='none';
+  var total=gs.elapsed;
+  var m=Math.floor(total/60), s=Math.floor(total%60).toString().padStart(2,'0');
+  document.getElementById('finalStats').innerHTML=
+    '<div class="stat-line">Wave: '+gs.wave+'</div>'+
+    '<div class="stat-line">Score: '+gs.score.toLocaleString()+'</div>'+
+    '<div class="stat-line">Kills: '+gs.kills+'</div>'+
+    '<div class="stat-line">Bosses Slain: '+gs.bossKills+'</div>'+
+    '<div class="stat-line">Time Survived: '+m+'m '+s+'s</div>'+
+    '<div class="stat-line" style="color:#ff4444;font-size:0.9em;margin-top:8px;">The zombies overran the range...</div>';
+  document.getElementById('gameOverCard').querySelector('h2').textContent='BOGEY!';
+  document.getElementById('gameOverCard').style.borderColor='#ff4444';
+  document.getElementById('gameOverCard').querySelector('h2').style.color='#ff4444';
+  document.getElementById('gameOverScreen').style.display='flex';
+}
+
+document.getElementById('retryBtn').addEventListener('click',function(){
+  document.getElementById('gameOverScreen').style.display='none';
+  startGame();
+});
+
+/* =========================================================
+   START GAME
+========================================================= */
+function startGame() {
+  gs=makeState();
+  gameMode='playing';
+  document.getElementById('cogBtn').style.display='flex';
+  document.getElementById('grenadeBtn').style.display='flex';
+  updateGrenadeBtn();
+  // Show wave 1 title card
+  gs.titleCard={text:'WAVE 1',subtext:'THE FIRST WAVE',timer:150};
+}
+
+/* =========================================================
+   MAIN LOOP
+========================================================= */
+function loop() {
+  if (gameMode==='title') {
+    drawTitle();
+  } else if (gameMode==='playing') {
+    if (gs&&!gs.gameOver) update();
+    draw();
+  }
+  requestAnimationFrame(loop);
+}
+
+/* =========================================================
+   INPUT
+========================================================= */
+var dragStartX=null, dragStartY=null, isDragging=false;
+var touchStartTime=0;
+
+canvas.addEventListener('touchstart',function(e){
+  e.preventDefault();
+  var tx=e.touches[0].clientX, ty=e.touches[0].clientY;
+  touchStartTime=Date.now();
+  dragStartX=tx; dragStartY=ty;
+  isDragging=false;
+
+  if (gameMode==='title') {
+    unlockAudio();
+    startGame();
+    return;
+  }
+  if (!gs||!gs.running) return;
+
+  // Check if tapping cart
+  for (var ci=0;ci<gs.carts.length;ci++) {
+    var cart=gs.carts[ci];
+    if (cart.active&&!cart.launched&&!cart.burning) {
+      if (Math.abs(tx-cart.x)<50&&Math.abs(ty-cart.y)<40) {
+        launchCart(cart);
+        return;
+      }
+    }
+  }
+
+  // Start drone drag
+  gs.droneDragging=true;
+},{passive:false});
+
+canvas.addEventListener('touchmove',function(e){
+  e.preventDefault();
+  if (!gs||!gs.running) return;
+  var tx=e.touches[0].clientX, ty=e.touches[0].clientY;
+  isDragging=true;
+
+  // Move drone to touch position (clamped to range area)
+  if (gs.droneDragging) {
+    gs.droneX=Math.max(W*0.05,Math.min(W*0.95,tx));
+    gs.droneY=Math.max(H*0.52,Math.min(H*0.78,ty));
+  }
+},{passive:false});
+
+canvas.addEventListener('touchend',function(e){
+  e.preventDefault();
+  if (!gs||!gs.running) return;
+  gs.droneDragging=false;
+
+  // Quick tap in lower zone = swing
+  if (!isDragging || Date.now()-touchStartTime<200) {
+    var ex=e.changedTouches[0].clientX;
+    var ey=e.changedTouches[0].clientY;
+    // Tap in golfer zone (bottom third)
+    if (ey>H*0.7) {
+      gs.swingState='windup';
+      gs.swingT=0;
+    }
+  }
+  isDragging=false;
+},{passive:false});
+
+// Mouse for desktop testing
+canvas.addEventListener('mousemove',function(e){
+  if (!gs||!gs.running) return;
+  gs.droneX=Math.max(W*0.05,Math.min(W*0.95,e.clientX));
+  gs.droneY=Math.max(H*0.52,Math.min(H*0.78,e.clientY));
+});
+
+canvas.addEventListener('click',function(e){
+  if (gameMode==='title') {
+    unlockAudio();
+    startGame();
+    return;
+  }
+  if (!gs||!gs.running) return;
+  if (e.clientY>H*0.7) {
+    gs.swingState='windup';
+    gs.swingT=0;
+  }
+});
+
+/* =========================================================
+   AUDIO PERMISSION MODAL
+========================================================= */
+document.getElementById('audioPermModal').style.display='flex';
+document.getElementById('enableAudioBtn').addEventListener('click',function(){
+  unlockAudio();
+  document.getElementById('audioPermModal').style.display='none';
+});
+document.getElementById('skipAudioBtn').addEventListener('click',function(){
+  document.getElementById('audioPermModal').style.display='none';
+});
+
+/* =========================================================
+   START LOOP
+========================================================= */
+requestAnimationFrame(loop);
+</script>
+
+<script>
+var ytReady=false;
+var ytPendingPlay=false;
+
+function onYouTubeIframeAPIReady(){
+  ytReady=true;
+  var url=document.getElementById('ytInput').value.trim()||'https://youtu.be/XMcbjp4Sq4M';
+  var info=ytExtract(url);
+  if (!info) return;
+  var pvars={autoplay:1,playsinline:1,controls:0,mute:1,origin:window.location.origin};
+  var vidId;
+  if (info.type==='playlist'){pvars.listType='playlist';pvars.list=info.id;pvars.shuffle=1;}
+  else{vidId=info.id;pvars.loop=1;pvars.playlist=info.id;}
+  var cfg={
+    height:'200',width:'200',playerVars:pvars,
+    events:{
+      onReady:function(e){
+        e.target.setVolume(Math.round(musicVolume*100));
+        if (ytPendingPlay){e.target.unMute();e.target.playVideo();ytPendingPlay=false;document.getElementById('musicStatus').textContent='Playing';}
+      },
+      onStateChange:function(e){
+        if (e.data===YT.PlayerState.ENDED||e.data===YT.PlayerState.UNSTARTED) e.target.playVideo();
+      }
+    }
+  };
+  if (vidId) cfg.videoId=vidId;
+  ytPlayer=new YT.Player('ytPlayerContainer',cfg);
+}
+</script>
+
+</body>
+</html>
