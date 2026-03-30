@@ -300,7 +300,7 @@ function makeState() {
 
     // Grenade balls (from button)
     grenades: 0,
-    grenadeThreshold: 5000,
+    grenadeThreshold: 15000,
 
     // Sniper NPCs
     snipers: [
@@ -1300,7 +1300,7 @@ function update() {
   // Grenade award
   if (gs.score>=gs.grenadeThreshold) {
     gs.grenades++;
-    gs.grenadeThreshold+=8000;
+    gs.grenadeThreshold+=20000;
     addFloat(W/2,H*0.4,'GRENADE BALL READY!','#ffcc00',true);
     updateGrenadeBtn();
   }
@@ -1479,7 +1479,7 @@ function update() {
   gs.snipers.forEach(function(sn){
     if (!sn.alive) return;
     sn.fireTimer++;
-    var rate=Math.max(20,60-sn.level*8);
+    var rate=300; // 5 second cooldown
     if (sn.fireTimer>=rate) {
       sn.fireTimer=0;
       var all=gs.zombies.concat(gs.bosses);
@@ -1562,7 +1562,7 @@ function update() {
       var rdx=rbNearest.x-rb.x,rdy=rbNearest.y-rb.y,rdl=Math.sqrt(rdx*rdx+rdy*rdy)||1;
       rb.x+=rdx/rdl*1.2; rb.y+=rdy/rdl*1.2;
     }
-    gs.zombies.forEach(function(z){if(dist(z.x,z.y,rb.x,rb.y)<25)hitZombie(z,1);});
+    gs.zombies.forEach(function(z){if(dist(z.x,z.y,rb.x,rb.y)<25){hitZombie(z,1);rb.hp-=2;}});
     if (rb.hp<=0){rb.alive=false;addFloat(rb.x,rb.y-30,'ROBOT DOWN!','#44aaff',true);}
   }
 
@@ -2019,29 +2019,28 @@ function beginStory() {
 }
 
 function advanceStory() {
-  // Tap to skip straight to end, second tap starts game
   if (storyDone) {
     startGame();
     return;
   }
-  // Skip to end
+  // First tap: skip to end, show TAP TO START
   storyScrollY = -(storyTotalH - H * 0.6);
+  storyAutoScroll = false;
   storyDone = true;
 }
 
 function drawStory() {
-  // Black starfield background
+  // Black background
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
-  // Slow auto-scroll
+  // Slow auto-scroll — loops back to top when done
   if (storyAutoScroll) {
     storyScrollY -= 0.8;
     var endPos = -(storyTotalH - H * 0.55);
     if (storyScrollY <= endPos) {
-      storyScrollY = endPos;
-      storyAutoScroll = false;
-      storyDone = true;
+      // Loop back to start
+      storyScrollY = H;
     }
   }
 
