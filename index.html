@@ -196,6 +196,17 @@ function ytExtract(url) {
   return null;
 }
 
+function ytStartMusic() {
+  if (ytPlayer && ytPlayer.unMute) {
+    ytPlayer.unMute();
+    ytPlayer.setVolume(Math.round(musicVolume * 100));
+    ytPlayer.playVideo();
+    document.getElementById('musicStatus').textContent = 'Playing';
+  } else {
+    ytPendingPlay = true;
+  }
+}
+
 document.getElementById('cogBtn').addEventListener('click', function() {
   document.getElementById('cogMenuOverlay').classList.add('show');
 });
@@ -1938,6 +1949,155 @@ document.getElementById('retryBtn').addEventListener('click',function(){
 });
 
 /* =========================================================
+   AUDIO MODAL TRIGGER
+========================================================= */
+function showAudioModal() {
+  document.getElementById('audioPermModal').style.display = 'flex';
+}
+
+/* =========================================================
+   STORY SCROLL
+========================================================= */
+var storyLines = [
+  { text: 'CLASSIFIED BRIEFING', size: 22, color: '#ff4444', delay: 0 },
+  { text: 'DATE: CLASSIFIED', size: 11, color: '#ff8844', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: 'In the near future,', size: 13, color: '#ccffcc', delay: 0 },
+  { text: 'the dead will rise.', size: 13, color: '#ccffcc', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: 'For reasons science cannot explain,', size: 12, color: '#aaddaa', delay: 0 },
+  { text: 'zombies have developed a particular', size: 12, color: '#aaddaa', delay: 0 },
+  { text: 'HATRED of golf courses.', size: 14, color: '#ff8844', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: 'Every driving range.', size: 12, color: '#aaddaa', delay: 0 },
+  { text: 'Every fairway.', size: 12, color: '#aaddaa', delay: 0 },
+  { text: 'Every 18th hole.', size: 12, color: '#aaddaa', delay: 0 },
+  { text: 'OVERRUN.', size: 18, color: '#ff4444', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: 'We are lucky to have one man', size: 13, color: '#ccffcc', delay: 0 },
+  { text: 'who refuses to yield the course.', size: 13, color: '#ccffcc', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: 'COLIN "MONSTER" JOHNSON.', size: 20, color: '#ffd700', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: "(That's Colin with ONE 'L'.)", size: 11, color: '#888', delay: 0 },
+  { text: 'Not to be confused with', size: 11, color: '#888', delay: 0 },
+  { text: 'any other possible golfers', size: 11, color: '#888', delay: 0 },
+  { text: 'in the world.', size: 11, color: '#888', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: 'Why "Monster"?', size: 14, color: '#ffcc44', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: 'Maybe because he is so gosh darn', size: 12, color: '#aaddaa', delay: 0 },
+  { text: 'good at killing monsters.', size: 12, color: '#aaddaa', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: 'Or maybe it\'s the energy drinks', size: 12, color: '#aaddaa', delay: 0 },
+  { text: 'he chugs to keep up his stamina.', size: 12, color: '#aaddaa', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: 'For whatever reason...', size: 13, color: '#ccffcc', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: 'WE NEED HIM.', size: 22, color: '#ff4444', delay: 0 },
+  { text: 'THE WORLD NEEDS HIM.', size: 18, color: '#ff4444', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: 'GOOD LUCK, MONSTER.', size: 16, color: '#ffd700', delay: 0 },
+  { text: '', size: 10, color: '#aaa', delay: 0 },
+  { text: '[ TAP TO TEE OFF ]', size: 14, color: '#44ff88', delay: 0 },
+];
+
+var storyScrollY = 0;       // current scroll position
+var storyTargetY = 0;       // target scroll (snaps on tap)
+var storyAutoScroll = true;
+var storyDone = false;
+var STORY_LINE_H = 28;      // px per line
+var storyTotalH = 0;        // computed total height
+
+function beginStory() {
+  gameMode = 'story';
+  storyScrollY = H;          // start below screen
+  storyAutoScroll = true;
+  storyDone = false;
+  // compute total content height
+  storyTotalH = storyLines.length * STORY_LINE_H + H * 0.3;
+}
+
+function advanceStory() {
+  // Tap to skip straight to end, second tap starts game
+  if (storyDone) {
+    startGame();
+    return;
+  }
+  // Skip to end
+  storyScrollY = -(storyTotalH - H * 0.6);
+  storyDone = true;
+}
+
+function drawStory() {
+  // Black starfield background
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  // Slow auto-scroll
+  if (storyAutoScroll) {
+    storyScrollY -= 0.8;
+    var endPos = -(storyTotalH - H * 0.55);
+    if (storyScrollY <= endPos) {
+      storyScrollY = endPos;
+      storyAutoScroll = false;
+      storyDone = true;
+    }
+  }
+
+  // Green scan-line overlay (like a classified dossier terminal)
+  for (var sl = 0; sl < H; sl += 4) {
+    ctx.fillStyle = 'rgba(0,40,0,0.12)';
+    ctx.fillRect(0, sl, W, 2);
+  }
+
+  // Draw lines
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (var i = 0; i < storyLines.length; i++) {
+    var line = storyLines[i];
+    var ly = storyScrollY + i * STORY_LINE_H + H * 0.1;
+    // Only draw if on screen
+    if (ly < -30 || ly > H + 30) continue;
+    if (!line.text) continue;
+    ctx.font = 'bold ' + line.size + 'px Arial Black, Arial, sans-serif';
+    // Glow for important lines
+    if (line.size >= 18) {
+      ctx.shadowColor = line.color;
+      ctx.shadowBlur = 14;
+    }
+    ctx.fillStyle = line.color;
+    ctx.fillText(line.text, W / 2, ly);
+    ctx.shadowBlur = 0;
+  }
+
+  // Top fade
+  var topFade = ctx.createLinearGradient(0, 0, 0, H * 0.12);
+  topFade.addColorStop(0, 'rgba(0,0,0,1)');
+  topFade.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = topFade;
+  ctx.fillRect(0, 0, W, H * 0.12);
+
+  // Bottom fade
+  var botFade = ctx.createLinearGradient(0, H * 0.82, 0, H);
+  botFade.addColorStop(0, 'rgba(0,0,0,0)');
+  botFade.addColorStop(1, 'rgba(0,0,0,1)');
+  ctx.fillStyle = botFade;
+  ctx.fillRect(0, H * 0.82, W, H * 0.18);
+
+  // Blink "TAP TO SKIP / TAP TO START" at bottom
+  var blinkOn = Math.floor(frameCount / 22) % 2;
+  if (blinkOn) {
+    ctx.fillStyle = storyDone ? '#ffd700' : 'rgba(80,255,136,0.7)';
+    ctx.font = 'bold 12px Arial Black';
+    ctx.textAlign = 'center';
+    ctx.fillText(storyDone ? 'TAP TO START' : 'TAP TO SKIP', W / 2, H * 0.93);
+  }
+
+  frameCount++;
+}
+
+/* =========================================================
    START GAME
 ========================================================= */
 function startGame() {
@@ -1956,6 +2116,8 @@ function startGame() {
 function loop() {
   if (gameMode==='title') {
     drawTitle();
+  } else if (gameMode==='story') {
+    drawStory();
   } else if (gameMode==='playing') {
     if (gs&&!gs.gameOver) update();
     draw();
@@ -1977,8 +2139,11 @@ canvas.addEventListener('touchstart',function(e){
   isDragging=false;
 
   if (gameMode==='title') {
-    unlockAudio();
-    startGame();
+    showAudioModal();
+    return;
+  }
+  if (gameMode==='story') {
+    advanceStory();
     return;
   }
   if (!gs||!gs.running) return;
@@ -2038,8 +2203,11 @@ canvas.addEventListener('mousemove',function(e){
 
 canvas.addEventListener('click',function(e){
   if (gameMode==='title') {
-    unlockAudio();
-    startGame();
+    showAudioModal();
+    return;
+  }
+  if (gameMode==='story') {
+    advanceStory();
     return;
   }
   if (!gs||!gs.running) return;
@@ -2052,13 +2220,16 @@ canvas.addEventListener('click',function(e){
 /* =========================================================
    AUDIO PERMISSION MODAL
 ========================================================= */
-document.getElementById('audioPermModal').style.display='flex';
+// audio modal shown after title tap
 document.getElementById('enableAudioBtn').addEventListener('click',function(){
   unlockAudio();
+  ytStartMusic();
   document.getElementById('audioPermModal').style.display='none';
+  beginStory();
 });
 document.getElementById('skipAudioBtn').addEventListener('click',function(){
   document.getElementById('audioPermModal').style.display='none';
+  beginStory();
 });
 
 /* =========================================================
