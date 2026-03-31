@@ -77,7 +77,7 @@ body{background:#000;overflow:hidden;font-family:'Arial Black',Arial,sans-serif;
     <button id="closeCog">&#x2715;</button>
     <h2>SETTINGS</h2>
     <div class="cogSection">
-      <label>MUSIC — PASTE YOUTUBE LINK</label>
+      <label>MUSIC - PASTE YOUTUBE LINK</label>
       <input id="ytInput" type="text" placeholder="https://youtube.com/watch?v=..." value="https://youtu.be/XMcbjp4Sq4M">
       <div class="cogRow">
         <button class="cogMusicBtn" id="ytPlay">PLAY</button>
@@ -241,11 +241,11 @@ document.getElementById('sfxVol').addEventListener('input', function() { sfxVolu
    BALL TYPES
 ========================================================= */
 var BALL_TYPES = {
-  standard:   { name:'STANDARD',   color:'#ffffff', glow:'#ffffff', dmg:10,  area:20, desc:'One shot' },
-  multi:      { name:'MULTI-SPLIT',color:'#ff88ff', glow:'#ff44ff', dmg:6,   area:16, desc:'5-way split', count:5 },
-  laser:      { name:'LASER',      color:'#44aaff', glow:'#0066ff', dmg:20,  area:200,desc:'Cuts through all' },
-  gasoline:   { name:'GASOLINE',   color:'#ff8800', glow:'#ff4400', dmg:8,   area:55, desc:'Flame area' },
-  grenade:    { name:'GRENADE',    color:'#ffcc00', glow:'#ff8800', dmg:30,  area:80, desc:'Big blast' }
+  standard:   { name:'STANDARD',   color:'#ffffff', glow:'#ffffff', dmg:15,  area:50,  desc:'One shot' },
+  multi:      { name:'MULTI-SPLIT',color:'#ff88ff', glow:'#ff44ff', dmg:10,  area:40,  desc:'5-way split', count:5 },
+  laser:      { name:'LASER',      color:'#44aaff', glow:'#0066ff', dmg:25,  area:200, desc:'Cuts through all' },
+  gasoline:   { name:'GASOLINE',   color:'#ff8800', glow:'#ff4400', dmg:12,  area:80,  desc:'Flame area' },
+  grenade:    { name:'GRENADE',    color:'#ffcc00', glow:'#ff8800', dmg:40,  area:120, desc:'Big blast' }
 };
 
 /* =========================================================
@@ -324,7 +324,9 @@ function makeState() {
     tankCart: null,
     droneAssist: null,
 
-    // Particles / floats
+    // Destroyer zombies
+    destroyers: [],
+    lastDestroyerTime: 0,
     particles: [],
     floats: [],
     lightningStrikes: [],
@@ -351,7 +353,7 @@ function makeState() {
 function px(x) { return Math.round(x); }
 function py(y) { return Math.round(y); }
 function rnd(a,b) { return a + Math.random()*(b-a); }
-function dist(ax,ay,bx,by) { return Math.hypot(ax-bx,ay-by); }
+function dist(ax,ay,bx,by) { var dx=ax-bx,dy=ay-by; return Math.sqrt(dx*dx+dy*dy); }
 function lerp(a,b,t) { return a+(b-a)*t; }
 
 function rr(x,y,w,h,r) {
@@ -364,8 +366,21 @@ function rr(x,y,w,h,r) {
   ctx.closePath();
 }
 
+
+function drawEllipse(cx,cy,rx,ry) {
+  // Polyfill for ctx.ellipse using bezier curves
+  var kappa = 0.5522848;
+  var ox = rx * kappa, oy = ry * kappa;
+  ctx.moveTo(cx, cy - ry);
+  ctx.bezierCurveTo(cx + ox, cy - ry, cx + rx, cy - oy, cx + rx, cy);
+  ctx.bezierCurveTo(cx + rx, cy + oy, cx + ox, cy + ry, cx, cy + ry);
+  ctx.bezierCurveTo(cx - ox, cy + ry, cx - rx, cy + oy, cx - rx, cy);
+  ctx.bezierCurveTo(cx - rx, cy - oy, cx - ox, cy - ry, cx, cy - ry);
+  ctx.closePath();
+}
+
 function addFloat(x,y,text,color,big) {
-  if (gs) gs.floats.push({x,y,text,color,big:big||false,alpha:1,vy:-1.2});
+  if (gs) gs.floats.push({x:x,y:y,text:text,color:color,big:big||false,alpha:1,vy:-1.2});
 }
 
 function spawnParticles(x,y,color,count) {
@@ -373,7 +388,7 @@ function spawnParticles(x,y,color,count) {
   for (var i=0;i<count;i++) {
     var a = Math.random()*Math.PI*2;
     var spd = 1 + Math.random()*3;
-    gs.particles.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:2+Math.random()*3,color,life:1,decay:0.025+Math.random()*0.03});
+    gs.particles.push({x:x,y:y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:2+Math.random()*3,color:color,life:1,decay:0.025+Math.random()*0.03});
   }
 }
 
@@ -500,9 +515,9 @@ function drawRollingHill(baseY,bumpH,color) {
 function drawFlatCloud(x,y,w,h) {
   ctx.globalAlpha = 0.88;
   ctx.fillStyle = '#ffffff';
-  ctx.beginPath(); ctx.ellipse(px(x),py(y),w,h,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(px(x+w*0.4),py(y+h*0.2),w*0.6,h*0.7,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(px(x-w*0.35),py(y+h*0.25),w*0.55,h*0.65,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); drawEllipse(px(x),py(y),w,h); ctx.fill();
+  ctx.beginPath(); drawEllipse(px(x+w*0.4),py(y+h*0.2),w*0.6,h*0.7); ctx.fill();
+  ctx.beginPath(); drawEllipse(px(x-w*0.35),py(y+h*0.25),w*0.55,h*0.65); ctx.fill();
   ctx.globalAlpha = 1;
 }
 
@@ -543,7 +558,7 @@ function drawGolfer(x,y,swingT,swingPhase) {
   // Shadow
   ctx.globalAlpha = 0.2;
   ctx.fillStyle = C.black;
-  ctx.beginPath(); ctx.ellipse(0,2,18,6,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.beginPath(); drawEllipse(0,2,18,6); ctx.fill();
   ctx.globalAlpha = 1;
 
   // Legs - khaki pants (wide, older golfer build)
@@ -563,7 +578,7 @@ function drawGolfer(x,y,swingT,swingPhase) {
   ctx.fillRect(-4,-20,8,5);
   // Belly bump - slightly round
   ctx.fillStyle = '#e8f0e8';
-  ctx.beginPath(); ctx.ellipse(0,-4,13,8,0,0,Math.PI,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0,-4,8,Math.PI,Math.PI*2); ctx.fill();
 
   // Head - older, round face
   ctx.fillStyle = C.skinDark;
@@ -648,21 +663,21 @@ function drawZombie(x, y, scale, hp, maxHp, type, immune) {
 
   // Shadow
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.beginPath(); ctx.ellipse(0, 23, 12, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.beginPath(); drawEllipse(0,23,12,4); ctx.fill();
 
   // Body
   ctx.fillStyle = bc; ctx.beginPath(); rr(-9, 0, 18, 22, 4); ctx.fill();
 
   // Head
-  ctx.fillStyle = hc; ctx.beginPath(); ctx.ellipse(0, -8, 11, 12, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = hc; ctx.beginPath(); ctx.beginPath(); drawEllipse(0,-8,11,12); ctx.fill();
 
   // Eyes
   ctx.fillStyle = '#ff0';
-  ctx.beginPath(); ctx.ellipse(-4, -10, 3, 3, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(4, -10, 3, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.beginPath(); drawEllipse(-4,-10,3,3); ctx.fill();
+  ctx.beginPath(); ctx.beginPath(); drawEllipse(4,-10,3,3); ctx.fill();
   ctx.fillStyle = '#f00';
-  ctx.beginPath(); ctx.ellipse(-4, -10, 1.5, 1.5, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(4, -10, 1.5, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.beginPath(); drawEllipse(-4,-10,1.5,1.5); ctx.fill();
+  ctx.beginPath(); ctx.beginPath(); drawEllipse(4,-10,1.5,1.5); ctx.fill();
 
   // Mouth
   ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
@@ -702,8 +717,43 @@ function drawZombie(x, y, scale, hp, maxHp, type, immune) {
 }
 
 /* =========================================================
-   DRAW SNIPER NPC
+   DRAW ZOMBIE DESTROYER
 ========================================================= */
+function drawZombieDestroyer(x, y, armAngle) {
+  ctx.save(); ctx.translate(px(x), py(y));
+  // Body - medium sized, gray
+  ctx.fillStyle = '#555'; ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.beginPath(); drawEllipse(0,-6,14,18); ctx.fill(); ctx.stroke();
+  // Head
+  ctx.fillStyle = '#666';
+  ctx.beginPath(); ctx.beginPath(); drawEllipse(0,-24,11,12); ctx.fill(); ctx.stroke();
+  // Red eyes
+  ctx.fillStyle = '#ff0000';
+  ctx.beginPath(); ctx.beginPath(); drawEllipse(-5,-26,3,3); ctx.fill();
+  ctx.beginPath(); ctx.beginPath(); drawEllipse(5,-26,3,3); ctx.fill();
+  // Crazy swinging arms
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  var la = armAngle;
+  ctx.beginPath();
+  ctx.moveTo(-10, -10);
+  ctx.lineTo(-10 + Math.cos(la)*28, -10 + Math.sin(la)*28);
+  ctx.stroke();
+  ctx.fillStyle = '#666';
+  ctx.beginPath(); ctx.arc(-10+Math.cos(la)*28, -10+Math.sin(la)*28, 5, 0, Math.PI*2); ctx.fill();
+  var ra = armAngle + Math.PI + 0.8;
+  ctx.beginPath();
+  ctx.moveTo(10, -10);
+  ctx.lineTo(10 + Math.cos(ra)*28, -10 + Math.sin(ra)*28);
+  ctx.stroke();
+  ctx.beginPath(); ctx.arc(10+Math.cos(ra)*28, -10+Math.sin(ra)*28, 5, 0, Math.PI*2); ctx.fill();
+  // Legs
+  ctx.fillStyle = '#444';
+  ctx.fillRect(-10, 10, 8, 12); ctx.fillRect(2, 10, 8, 12);
+  ctx.lineCap = 'butt';
+  ctx.restore();
+}
+
+
 function drawSniper(sn) {
   if (!sn.alive) return;
   ctx.save();
@@ -757,9 +807,9 @@ function drawGolfCart(cart) {
     // Fire!
     var ft = frameCount*0.2;
     ctx.fillStyle = 'rgba(255,100,0,0.85)';
-    ctx.beginPath(); ctx.ellipse(0,-14,8+Math.sin(ft)*3,10+Math.cos(ft*1.3)*3,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0,-14,9+Math.sin(ft)*3,0,Math.PI*2); ctx.fill();
     ctx.fillStyle = 'rgba(255,220,0,0.7)';
-    ctx.beginPath(); ctx.ellipse(0,-20,5+Math.sin(ft*1.7)*2,7+Math.cos(ft)*2,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0,-20,6+Math.sin(ft*1.7)*2,0,Math.PI*2); ctx.fill();
   }
 
   // Cart body
@@ -1011,7 +1061,7 @@ function spawnZombie() {
     if (r < csum) { chosenType=types[i]; break; }
   }
   var hpMult = Math.min(gs.zombieHpMult||1, 6);
-  var zHp = Math.round((chosenType!=='green'?2:1)*hpMult*10);
+  var zHp = Math.round((chosenType!=='green'?2:1)*hpMult*8);
   // Spawn from far end or holes
   var zx = Math.random()*W;
   var zy = H*0.53 + Math.random()*H*0.04;
@@ -1069,7 +1119,7 @@ function fireBall(ballType) {
       });
     }
   } else {
-    gs.ballFlights.push({tx,ty,t:0,ballType,dmg:bc.dmg,area:bc.area});
+    gs.ballFlights.push({tx:tx,ty:ty,t:0,ballType:ballType,dmg:bc.dmg,area:bc.area});
   }
 }
 
@@ -1083,7 +1133,7 @@ function resolveBallHit(bf) {
   var ballType=bf.ballType;
   var scored = false;
 
-  // Check holes — score in the hole = bonus grenade!
+  // Check holes - score in the hole = bonus grenade!
   gs.holes = gs.holes.filter(function(h) {
     if (dist(tx,ty,h.x,h.y) < h.r + 10) {
       gs.grenades++;
@@ -1219,13 +1269,16 @@ function activateBallType(type) {
 ========================================================= */
 function awardPowerup(type) {
   if (type==='robot') {
-    gs.robot = {x:W*0.5+rnd(-60,60),y:H*0.6,hp:300,maxHp:300,alive:true,fireTimer:0};
+    // Left third of range
+    gs.robot = {x:W*0.22,y:H*0.63,hp:300,maxHp:300,alive:true,fireTimer:0};
     addFloat(W/2,H*0.3,'ROBOT DEPLOYED!','#44aaff',true);
   } else if (type==='tankCart') {
-    gs.tankCart = {x:W*0.5,y:H*0.7,hp:500,maxHp:500,alive:true,fireTimer:0,speed:1.5,angle:0};
+    // Center of range
+    gs.tankCart = {x:W*0.5,y:H*0.68,hp:500,maxHp:500,alive:true,fireTimer:0,speed:1.5,angle:0};
     addFloat(W/2,H*0.3,'TANK CART ONLINE!','#ffcc00',true);
   } else if (type==='droneAssist') {
-    gs.droneAssist = {x:W*0.5,y:H*0.35,hp:200,maxHp:200,alive:true,fireTimer:0};
+    // Right third of range
+    gs.droneAssist = {x:W*0.78,y:H*0.58,hp:200,maxHp:200,alive:true,fireTimer:0};
     addFloat(W/2,H*0.3,'DRONE ASSIST ACTIVE!','#00ff88',true);
   }
 }
@@ -1283,6 +1336,7 @@ document.getElementById('grenadeBtn').addEventListener('touchend',function(e){e.
 ========================================================= */
 function update() {
   if (!gs||!gs.running||gs.gameOver) return;
+  try {
   var now=Date.now();
   gs.elapsed+=1/60;
   gs.frame++;
@@ -1314,6 +1368,56 @@ function update() {
     for (var zw=0;zw<count;zw++) spawnZombie();
     gs.lastZombieTime=now2;
   }
+
+  // Spawn destroyer if any powerup is alive - every 30s
+  if (now2-gs.lastDestroyerTime>30000) {
+    var hasTarget = (gs.robot&&gs.robot.alive)||(gs.tankCart&&gs.tankCart.alive)||(gs.droneAssist&&gs.droneAssist.alive);
+    if (hasTarget) {
+      var targets=[];
+      if (gs.robot&&gs.robot.alive)       targets.push({type:'robot',   x:gs.robot.x,      y:gs.robot.y});
+      if (gs.tankCart&&gs.tankCart.alive) targets.push({type:'tankCart',x:gs.tankCart.x,    y:gs.tankCart.y});
+      if (gs.droneAssist&&gs.droneAssist.alive) targets.push({type:'droneAssist',x:gs.droneAssist.x,y:gs.droneAssist.y});
+      var pick = targets[Math.floor(Math.random()*targets.length)];
+      gs.destroyers.push({
+        x:Math.random()*W, y:H*0.53,
+        targetType:pick.type,
+        armAngle:0,
+        hp:100, maxHp:100,
+        speed:0.9
+      });
+      addFloat(W/2,H*0.35,'DESTROYER INCOMING!','#ff0000',true);
+      gs.lastDestroyerTime=now2;
+    }
+  }
+
+  // Update destroyers
+  gs.destroyers=gs.destroyers.filter(function(d){
+    d.armAngle+=0.12;
+    // Find current target position
+    var dTarget=null;
+    if (d.targetType==='robot'      &&gs.robot&&gs.robot.alive)           dTarget={x:gs.robot.x,y:gs.robot.y};
+    if (d.targetType==='tankCart'   &&gs.tankCart&&gs.tankCart.alive)     dTarget={x:gs.tankCart.x,y:gs.tankCart.y};
+    if (d.targetType==='droneAssist'&&gs.droneAssist&&gs.droneAssist.alive) dTarget={x:gs.droneAssist.x,y:gs.droneAssist.y};
+    if (!dTarget) {
+      // Target already dead - destroyer wanders toward golfer
+      var ddx=gs.golferX-d.x, ddy=gs.golferY-d.y, ddl=Math.sqrt(ddx*ddx+ddy*ddy)||1;
+      d.x+=ddx/ddl*d.speed; d.y+=ddy/ddl*d.speed;
+      if (d.y>=H*0.86) return false;
+      return true;
+    }
+    var ddx=dTarget.x-d.x, ddy=dTarget.y-d.y, ddl=Math.sqrt(ddx*ddx+ddy*ddy)||1;
+    d.x+=ddx/ddl*d.speed; d.y+=ddy/ddl*d.speed;
+    // Destroy target on contact - immune to ball damage (handled separately)
+    if (ddl<35) {
+      if (d.targetType==='robot'       &&gs.robot)       { gs.robot.alive=false;       addFloat(d.x,d.y-30,'ROBOT DESTROYED!','#ff4400',true); }
+      if (d.targetType==='tankCart'    &&gs.tankCart)    { gs.tankCart.alive=false;     addFloat(d.x,d.y-30,'TANK DESTROYED!','#ff4400',true); }
+      if (d.targetType==='droneAssist' &&gs.droneAssist) { gs.droneAssist.alive=false;  addFloat(d.x,d.y-30,'DRONE DOWN!','#ff4400',true); }
+      spawnParticles(d.x,d.y,'#ff4400',20);
+      sfxExplosion();
+      return false;
+    }
+    return true;
+  });
 
   // Spawn holes
   if (now2-gs.lastHoleTime>12000) {
@@ -1356,7 +1460,7 @@ function update() {
 
   // Update ball flights
   gs.ballFlights=gs.ballFlights.filter(function(bf){
-    bf.t+=0.028;
+    bf.t+=0.055;
     if (bf.t>=1) {
       resolveBallHit(bf);
       return false;
@@ -1596,17 +1700,26 @@ function update() {
   // Drone assist
   if (gs.droneAssist&&gs.droneAssist.alive) {
     var da=gs.droneAssist;
+    // Chase closest zombie
+    var allZD=gs.zombies.concat(gs.bosses);
+    var daT=null,daD=99999;
+    allZD.forEach(function(z){var d=dist(z.x,z.y,da.x,da.y);if(d<daD){daD=d;daT=z;}});
+    if (daT) {
+      var daDx=daT.x-da.x, daDy=daT.y-da.y, daDl=Math.sqrt(daDx*daDx+daDy*daDy)||1;
+      da.x+=daDx/daDl*2; da.y+=daDy/daDl*2;
+    }
+    da.x=Math.max(W*0.05,Math.min(W*0.95,da.x));
+    da.y=Math.max(H*0.52,Math.min(H*0.80,da.y));
+    // Fire at target
     da.fireTimer++;
-    if (da.fireTimer>=30) {
+    if (da.fireTimer>=30&&daT) {
       da.fireTimer=0;
-      var allZD=gs.zombies.concat(gs.bosses);
-      var daT=null,daD=99999;
-      allZD.forEach(function(z){var d=dist(z.x,z.y,da.x,da.y);if(d<daD){daD=d;daT=z;}});
-      if (daT) {
-        hitZombie(daT,10);
-        spawnParticles(daT.x,daT.y,'#00ff88',3);
-        sfxMachineGun();
-      }
+      hitZombie(daT,10);
+      spawnParticles(daT.x,daT.y,'#00ff88',3);
+      // Visible laser line
+      gs.particles.push({x:da.x,y:da.y,vx:0,vy:0,r:1,color:'#00ff88',life:0.3,decay:0.15,
+        isLaser:true,tx:daT.x,ty:daT.y});
+      sfxMachineGun();
     }
     da.hp-=0.02;
     if (da.hp<=0){da.alive=false;addFloat(da.x,da.y-30,'DRONE ASSIST DOWN!','#00ff88',true);}
@@ -1647,7 +1760,7 @@ function update() {
       gs.droneX += (closest.x - gs.droneX) * 0.12;
       gs.droneY += (closest.y - gs.droneY) * 0.12;
       gs.droneX = Math.max(W*0.05, Math.min(W*0.95, gs.droneX));
-      gs.droneY = Math.max(H*0.52, Math.min(H*0.78, gs.droneY));
+      gs.droneY = Math.max(H*0.58, Math.min(H*0.84, gs.droneY));
     }
   }
 
@@ -1661,13 +1774,11 @@ function update() {
   }
 
   updateGrenadeBtn();
+  } catch(e) { console.log('UPDATE ERROR:',e.message,e.stack); }
 }
-
-/* =========================================================
-   DRAW
-========================================================= */
 function draw() {
   if (!gs) return;
+  try {
 
   // Background
   drawRange();
@@ -1677,9 +1788,9 @@ function draw() {
     ctx.save();
     ctx.globalAlpha=Math.min(1,h.life/60);
     ctx.fillStyle='#111';
-    ctx.beginPath(); ctx.ellipse(px(h.x),py(h.y),h.r,h.r*0.5,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); drawEllipse(px(h.x),py(h.y),h.r,h.r*0.5); ctx.fill();
     ctx.strokeStyle='#333'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.ellipse(px(h.x),py(h.y),h.r,h.r*0.5,0,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); drawEllipse(px(h.x),py(h.y),h.r,h.r*0.5); ctx.stroke();
     // Smoke
     ctx.globalAlpha=0.4*Math.min(1,h.life/60);
     ctx.fillStyle='#555';
@@ -1708,9 +1819,20 @@ function draw() {
     ctx.save();
     ctx.globalAlpha=p.life*0.8;
     ctx.fillStyle='rgba(255,80,0,0.5)';
-    ctx.beginPath(); ctx.ellipse(px(p.x),py(p.y),p.r*1.2,p.r*0.6,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); drawEllipse(px(p.x),py(p.y),p.r*1.2,p.r*0.6); ctx.fill();
     ctx.fillStyle=p.life>0.5?'#ffee44':'#ff6600';
-    ctx.beginPath(); ctx.ellipse(px(p.x),py(p.y),p.r*0.6,p.r*0.3,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); drawEllipse(px(p.x),py(p.y),p.r*0.6,p.r*0.3); ctx.fill();
+    ctx.restore();
+  });
+
+  // Destroyers
+  gs.destroyers.forEach(function(d){
+    drawZombieDestroyer(d.x,d.y,d.armAngle);
+    ctx.save();
+    ctx.strokeStyle='rgba(255,0,0,0.5)'; ctx.lineWidth=3;
+    ctx.shadowColor='#ff0000'; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.arc(px(d.x),py(d.y-6),28,0,Math.PI*2); ctx.stroke();
+    ctx.shadowBlur=0;
     ctx.restore();
   });
 
@@ -1742,7 +1864,7 @@ function draw() {
     ctx.fillStyle='rgba(68,170,255,0.18)';
     ctx.beginPath(); rr(-10,-20,20,28,3); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.arc(0,-26,10,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='rgba(0,255,136,0.8)'; ctx.beginPath(); ctx.ellipse(0,-26,6,4,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(0,255,136,0.8)'; ctx.beginPath(); ctx.beginPath(); drawEllipse(0,-26,6,4); ctx.fill();
     ctx.shadowBlur=0; ctx.restore();
     var bW=36; ctx.fillStyle='#333'; ctx.fillRect(rb.x-18,rb.y+28,bW,4);
     ctx.fillStyle='#44aaff'; ctx.fillRect(rb.x-18,rb.y+28,(rb.hp/rb.maxHp)*bW,4);
@@ -1755,7 +1877,7 @@ function draw() {
     ctx.fillStyle='#556633'; ctx.strokeStyle='#334422'; ctx.lineWidth=2;
     ctx.beginPath(); rr(-28,-14,56,28,4); ctx.fill(); ctx.stroke();
     ctx.fillStyle='#667744';
-    ctx.beginPath(); ctx.ellipse(4,0,14,12,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.beginPath(); drawEllipse(4,0,14,12); ctx.fill(); ctx.stroke();
     ctx.fillStyle='#445533'; ctx.fillRect(14,-3,22,6);
     ctx.fillStyle='#333322';
     ctx.fillRect(-28,-18,56,6); ctx.fillRect(-28,12,56,6);
@@ -1791,8 +1913,15 @@ function draw() {
   gs.particles.forEach(function(p){
     if (p.isFlame) return;
     ctx.save(); ctx.globalAlpha=p.life;
-    ctx.fillStyle=p.color;
-    ctx.beginPath(); ctx.arc(px(p.x),py(p.y),p.r,0,Math.PI*2); ctx.fill();
+    if (p.isLaser) {
+      ctx.strokeStyle='#00ff88'; ctx.lineWidth=2;
+      ctx.shadowColor='#00ff88'; ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.moveTo(px(p.x),py(p.y)); ctx.lineTo(px(p.tx),py(p.ty)); ctx.stroke();
+      ctx.shadowBlur=0;
+    } else {
+      ctx.fillStyle=p.color;
+      ctx.beginPath(); ctx.arc(px(p.x),py(p.y),p.r,0,Math.PI*2); ctx.fill();
+    }
     ctx.restore();
   });
 
@@ -1849,6 +1978,16 @@ function draw() {
 
   // HUD
   drawHUD();
+  } catch(e) {
+    ctx.fillStyle='#fff';
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#f00';
+    ctx.font='bold 14px Arial';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText('DRAW ERROR: '+e.message, W/2, H/2);
+    ctx.fillText(e.stack ? e.stack.split('\n')[1] : '', W/2, H/2+24);
+  }
 }
 
 /* =========================================================
@@ -1929,7 +2068,7 @@ function triggerGameOver() {
   document.getElementById('grenadeBtn').style.display='none';
   document.getElementById('cogBtn').style.display='none';
   var total=gs.elapsed;
-  var m=Math.floor(total/60), s=Math.floor(total%60).toString().padStart(2,'0');
+  var m=Math.floor(total/60), s=(Math.floor(total%60)<10?'0':'')+Math.floor(total%60);
   document.getElementById('finalStats').innerHTML=
     '<div class="stat-line">Wave: '+gs.wave+'</div>'+
     '<div class="stat-line">Score: '+gs.score.toLocaleString()+'</div>'+
@@ -2034,7 +2173,7 @@ function drawStory() {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
-  // Slow auto-scroll — loops back to top when done
+  // Slow auto-scroll - loops back to top when done
   if (storyAutoScroll) {
     storyScrollY -= 0.8;
     var endPos = -(storyTotalH - H * 0.55);
@@ -2171,7 +2310,7 @@ canvas.addEventListener('touchmove',function(e){
   // Move drone to touch position (clamped to range area)
   if (gs.droneDragging) {
     gs.droneX=Math.max(W*0.05,Math.min(W*0.95,tx));
-    gs.droneY=Math.max(H*0.52,Math.min(H*0.78,ty));
+    gs.droneY=Math.max(H*0.58,Math.min(H*0.84,ty));
   }
 },{passive:false});
 
@@ -2197,7 +2336,7 @@ canvas.addEventListener('touchend',function(e){
 canvas.addEventListener('mousemove',function(e){
   if (!gs||!gs.running) return;
   gs.droneX=Math.max(W*0.05,Math.min(W*0.95,e.clientX));
-  gs.droneY=Math.max(H*0.52,Math.min(H*0.78,e.clientY));
+  gs.droneY=Math.max(H*0.58,Math.min(H*0.84,e.clientY));
 });
 
 canvas.addEventListener('click',function(e){
