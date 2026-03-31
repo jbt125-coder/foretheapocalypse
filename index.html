@@ -7,7 +7,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>FORE THE APOCALYPSE</title>
-<script src="https://www.youtube.com/iframe_api"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 html{height:100%;overflow:hidden;}
@@ -103,11 +102,17 @@ body{background:#000;overflow:hidden;font-family:'Arial Black',Arial,sans-serif;
 var canvas = document.getElementById('gameCanvas');
 var ctx = canvas.getContext('2d');
 var W = 0, H = 0;
+
+// Immediately paint black so there's no white flash
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+ctx.fillStyle = '#000';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
 var frameCount = 0;
 
 function resize() {
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
+  W = canvas.width = window.innerWidth || 390;
+  H = canvas.height = window.innerHeight || 844;
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', function() { setTimeout(resize, 120); });
@@ -279,6 +284,7 @@ function makeState() {
     droneX: W / 2,
     droneY: H * 0.38,
     droneDragging: false,
+    droneManualTimer: 0,  // frames of manual override after finger lift
 
     // Current ball
     currentBall: 'standard',
@@ -1302,6 +1308,59 @@ function launchCart(cart) {
 /* =========================================================
    GRENADE BALL
 ========================================================= */
+function handleBonusTap(tx, ty) {
+  if (!bonusRound) return;
+  var br = bonusRound;
+
+  // Intro - tap to skip
+  if (br.phase === 'intro') {
+    br.introTimer = 0;
+    return;
+  }
+
+  // Tally - tap to continue (after short delay)
+  if (br.phase === 'tally' && br.tallyTimer > 60) {
+    advanceToNextWave();
+    return;
+  }
+
+  // Shooting phases - tap golfer zone to swing
+  if ((br.phase === 'circling' || br.phase === 'hio') && ty > H*0.7) {
+    if (gs.swingState === 'idle') {
+      gs.swingState = 'windup';
+      gs.swingT = 0;
+    }
+  }
+
+  // Skip hole button in HIO phase
+  if (br.phase === 'hio' && !br.hioBallFlight) {
+    if (tx > W*0.3 && tx < W*0.7 && ty > H*0.48 && ty < H*0.48+28) {
+      br.hioAttempted = true;
+      buildTally();
+      br.phase = 'tally';
+    }
+  }
+}
+
+
+function fireBonusBall() {
+  if (!bonusRound) return;
+  var br = bonusRound;
+
+  if (br.phase === 'hio' && !br.hioBallFlight) {
+    br.hioBallFlight = {tx:gs.droneX, ty:gs.droneY, t:0, ballType:'standard', dmg:15, area:25};
+    br.hioShots++;
+    sfxSwing();
+    return;
+  }
+
+  if (br.phase !== 'circling') return;
+  if (br.ballInFlight) return;
+  br.shotsTotal++;
+  br.ballInFlight = {tx:gs.droneX, ty:gs.droneY, t:0, ballType:'standard', dmg:15, area:50};
+  sfxSwing();
+}
+
 function fireGrenadeBall() {
   if (!gs || gs.grenades<=0) return;
   gs.grenades--;
@@ -1563,19 +1622,8 @@ function update() {
     gs.clearFlashTimer=(gs.clearFlashTimer||0)+1;
     if (gs.zombies.length===0&&gs.bosses.length===0) {
       gs.clearingZombies=false;
-      // Advance wave
-      gs.wave++;
-      gs.zombieHpMult=Math.min(1+gs.wave*0.3,5);
-      gs.kingsRequired=Math.min(gs.wave,4);
-      gs.kingDefeated=false;
-      gs.kingSpawned=false;
-      gs.kingsKilled=0;
-      gs.elapsed=0;
-      gs.lastBossTime=Date.now();
-      // Title card
-      var waveNames=['','The First Wave','The Rising Dead','Blood on the Green','The King\'s Army','Apocalypse Golf','Monster Drive','The Final Fore'];
-      var waveLine=waveNames[Math.min(gs.wave,waveNames.length-1)]||'Wave '+gs.wave;
-      gs.titleCard={text:'WAVE '+gs.wave,subtext:waveLine.toUpperCase(),timer:180};
+      // Trigger bonus round before advancing wave
+      startBonusRound();
     }
   }
 
@@ -1747,18 +1795,17 @@ function update() {
     if (gs.titleCard.timer<=0) gs.titleCard=null;
   }
 
-  // Auto-aim drone to closest zombie to golfer when not dragging
+  // Auto-aim: track closest zombie, but touch input overrides every frame
   if (!gs.droneDragging) {
-    var allTargets = gs.zombies.concat(gs.bosses);
+    var allT = gs.zombies.concat(gs.bosses);
     var closest = null, closestD = 99999;
-    allTargets.forEach(function(z) {
+    allT.forEach(function(z) {
       var d = dist(z.x, z.y, gs.golferX, gs.golferY);
       if (d < closestD) { closestD = d; closest = z; }
     });
     if (closest) {
-      // Smoothly move drone toward closest zombie
-      gs.droneX += (closest.x - gs.droneX) * 0.12;
-      gs.droneY += (closest.y - gs.droneY) * 0.12;
+      gs.droneX += (closest.x - gs.droneX) * 0.08;
+      gs.droneY += (closest.y - gs.droneY) * 0.08;
       gs.droneX = Math.max(W*0.05, Math.min(W*0.95, gs.droneX));
       gs.droneY = Math.max(H*0.58, Math.min(H*0.84, gs.droneY));
     }
@@ -2070,12 +2117,12 @@ function triggerGameOver() {
   var total=gs.elapsed;
   var m=Math.floor(total/60), s=(Math.floor(total%60)<10?'0':'')+Math.floor(total%60);
   document.getElementById('finalStats').innerHTML=
-    '<div class="stat-line">Wave: '+gs.wave+'</div>'+
-    '<div class="stat-line">Score: '+gs.score.toLocaleString()+'</div>'+
-    '<div class="stat-line">Kills: '+gs.kills+'</div>'+
-    '<div class="stat-line">Bosses Slain: '+gs.bossKills+'</div>'+
-    '<div class="stat-line">Time Survived: '+m+'m '+s+'s</div>'+
-    '<div class="stat-line" style="color:#ff4444;font-size:0.9em;margin-top:8px;">The zombies overran the range...</div>';
+    '<div class="stat-line">Wave: '+gs.wave+'<\/div>'+
+    '<div class="stat-line">Score: '+gs.score.toLocaleString()+'<\/div>'+
+    '<div class="stat-line">Kills: '+gs.kills+'<\/div>'+
+    '<div class="stat-line">Bosses Slain: '+gs.bossKills+'<\/div>'+
+    '<div class="stat-line">Time Survived: '+m+'m '+s+'s<\/div>'+
+    '<div class="stat-line" style="color:#ff4444;font-size:0.9em;margin-top:8px;">The zombies overran the range...<\/div>';
   document.getElementById('gameOverCard').querySelector('h2').textContent='BOGEY!';
   document.getElementById('gameOverCard').style.borderColor='#ff4444';
   document.getElementById('gameOverCard').querySelector('h2').style.color='#ff4444';
@@ -2118,7 +2165,7 @@ var storyLines = [
   { text: '', size: 10, color: '#aaa', delay: 0 },
   { text: 'COLIN "MONSTER" JOHNSON.', size: 20, color: '#ffd700', delay: 0 },
   { text: '', size: 10, color: '#aaa', delay: 0 },
-  { text: "(That's Colin with ONE 'L'.)", size: 11, color: '#888', delay: 0 },
+  { text: "That's Colin with ONE L.", size: 11, color: '#888', delay: 0 },
   { text: 'Not to be confused with', size: 11, color: '#888', delay: 0 },
   { text: 'any other possible golfers', size: 11, color: '#888', delay: 0 },
   { text: 'in the world.', size: 11, color: '#888', delay: 0 },
@@ -2128,7 +2175,7 @@ var storyLines = [
   { text: 'Maybe because he is so gosh darn', size: 12, color: '#aaddaa', delay: 0 },
   { text: 'good at killing monsters.', size: 12, color: '#aaddaa', delay: 0 },
   { text: '', size: 10, color: '#aaa', delay: 0 },
-  { text: 'Or maybe it\'s the energy drinks', size: 12, color: '#aaddaa', delay: 0 },
+  { text: "Or maybe it's the energy drinks", size: 12, color: '#aaddaa', delay: 0 },
   { text: 'he chugs to keep up his stamina.', size: 12, color: '#aaddaa', delay: 0 },
   { text: '', size: 10, color: '#aaa', delay: 0 },
   { text: 'For whatever reason...', size: 13, color: '#ccffcc', delay: 0 },
@@ -2150,7 +2197,7 @@ var storyTotalH = 0;        // computed total height
 
 function beginStory() {
   gameMode = 'story';
-  storyScrollY = H;          // start below screen
+  storyScrollY = H * 0.3;    // start mid-screen
   storyAutoScroll = true;
   storyDone = false;
   // compute total content height
@@ -2236,6 +2283,593 @@ function drawStory() {
 }
 
 /* =========================================================
+   BONUS ROUND - DRONE RECONFIGURATION
+========================================================= */
+var bonusRound = null;
+// Scorecard history across all bonus rounds
+var bonusScorecard = [];
+
+function startBonusRound() {
+  gameMode = 'bonus';
+  bonusRound = {
+    phase: 'intro',       // intro, aim, shooting, circling, hio, tally
+    introTimer: 180,
+
+    // Barrel
+    barrelX: W * 0.5,
+    barrelY: H * 0.62,
+    barrelLit: false,
+    barrelFlameT: 0,
+
+    // Drone aim phase
+    droneOnBarrel: false,
+    droneOnBarrelTimer: 0, // hold 1.5s to light barrel
+
+    // Zombies
+    bonusZombies: [],
+    totalZombies: 5,
+    zombiesSpawned: 0,
+    spawnTimer: 0,
+    circleAngle: 0,
+
+    // Shooting
+    lastShotTime: 0,
+    shotCooldown: 120, // 2 seconds at 60fps
+    ballInFlight: null,
+    shotsTotal: 0,
+    shotsHit: 0,
+
+    // Hole in one
+    holeX: W * 0.25 + Math.random() * W * 0.5,
+    holeY: H * 0.55 + Math.random() * H * 0.04,
+    hioAttempted: false,
+    hioSunk: false,
+    hioBallFlight: null,
+    hioShots: 0,
+
+    // Tally
+    tallyTimer: 0
+  };
+}
+
+function advanceToNextWave() {
+  gs.wave++;
+  gs.zombieHpMult = Math.min(1+gs.wave*0.3, 5);
+  gs.kingsRequired = Math.min(gs.wave, 4);
+  gs.kingDefeated = false;
+  gs.kingSpawned = false;
+  gs.kingsKilled = 0;
+  gs.elapsed = 0;
+  gs.lastBossTime = Date.now();
+  gameMode = 'playing';
+  bonusRound = null;
+  var waveNames = ['','The First Wave','The Rising Dead','Blood on the Green','The Kings Army','Apocalypse Golf','Monster Drive','The Final Fore'];
+  var waveLine = waveNames[Math.min(gs.wave, waveNames.length-1)] || 'Wave '+gs.wave;
+  gs.titleCard = {text:'WAVE '+gs.wave, subtext:waveLine.toUpperCase(), timer:180};
+}
+
+function updateBonusRound() {
+  if (!bonusRound) return;
+  var br = bonusRound;
+  frameCount++;
+
+  // INTRO PHASE
+  if (br.phase === 'intro') {
+    br.introTimer--;
+    if (br.introTimer <= 0) br.phase = 'aim';
+    return;
+  }
+
+  // AIM PHASE - player drags drone onto barrel to light it
+  if (br.phase === 'aim') {
+    var dd = dist(gs.droneX, gs.droneY, br.barrelX, br.barrelY);
+    if (dd < 40) {
+      br.droneOnBarrel = true;
+      br.droneOnBarrelTimer++;
+      if (br.droneOnBarrelTimer >= 90) { // 1.5 seconds
+        br.barrelLit = true;
+        br.phase = 'circling';
+        sfxExplosion();
+        spawnParticles(br.barrelX, br.barrelY, '#ff6600', 20);
+      }
+    } else {
+      br.droneOnBarrel = false;
+      br.droneOnBarrelTimer = 0;
+    }
+    return;
+  }
+
+  // CIRCLING PHASE - zombies pour out and circle barrel
+  if (br.phase === 'circling') {
+    br.barrelFlameT += 0.15;
+    br.circleAngle += 0.02;
+
+    // Spawn zombies one at a time
+    br.spawnTimer++;
+    if (br.zombiesSpawned < br.totalZombies && br.spawnTimer >= 40) {
+      br.spawnTimer = 0;
+      var angle = (br.zombiesSpawned / br.totalZombies) * Math.PI * 2;
+      var r = 30 + Math.random() * 20;
+      br.bonusZombies.push({
+        x: br.barrelX + Math.cos(angle) * r,
+        y: br.barrelY + Math.sin(angle) * r,
+        hp: 10, maxHp: 10,
+        type: ['green','pink','blue','orange'][Math.floor(Math.random()*4)],
+        circleR: 60 + Math.random() * 40,
+        circleOffset: angle,
+        phase: 'circling', // circling or charging
+        chargeDelay: 120 + br.zombiesSpawned * 30,
+        chargeTimer: 0,
+        speed: 0.8 + Math.random() * 0.4
+      });
+      br.zombiesSpawned++;
+      sfxZombieDie();
+    }
+
+    // Update bonus zombies
+    var golferY = H * 0.86;
+    br.bonusZombies = br.bonusZombies.filter(function(z) {
+      if (z.phase === 'circling') {
+        // Circle barrel
+        z.circleOffset += 0.025;
+        z.x = br.barrelX + Math.cos(z.circleOffset) * z.circleR;
+        z.y = br.barrelY + Math.sin(z.circleOffset) * z.circleR;
+        z.chargeTimer++;
+        if (z.chargeTimer >= z.chargeDelay) z.phase = 'charging';
+      } else {
+        // Charge toward Colin
+        var dx = gs.golferX - z.x, dy = golferY - z.y;
+        var dl = Math.sqrt(dx*dx+dy*dy) || 1;
+        z.x += dx/dl * z.speed * 1.6;
+        z.y += dy/dl * z.speed * 1.6;
+        if (z.y >= golferY - 20) return false; // reached Colin - missed!
+      }
+      return z.hp > 0;
+    });
+
+    // Check if all zombies spawned and gone - move to HIO
+    if (br.zombiesSpawned >= br.totalZombies && br.bonusZombies.length === 0) {
+      br.phase = 'hio';
+      addFloat(W/2, H*0.4, 'HOLE IN ONE ATTEMPT!', '#ffd700', true);
+    }
+
+    // Update ball in flight
+    if (br.ballInFlight) {
+      br.ballInFlight.t += 0.08;
+      if (br.ballInFlight.t >= 1) {
+        resolveBonusBallHit(br.ballInFlight);
+        br.ballInFlight = null;
+      }
+    }
+    return;
+  }
+
+  // HOLE IN ONE PHASE
+  if (br.phase === 'hio') {
+    if (br.hioBallFlight) {
+      br.hioBallFlight.t += 0.06;
+      if (br.hioBallFlight.t >= 1) {
+        // Check if sunk
+        var hdx = br.hioBallFlight.tx - br.holeX;
+        var hdy = br.hioBallFlight.ty - br.holeY;
+        if (Math.sqrt(hdx*hdx+hdy*hdy) < 25) {
+          br.hioSunk = true;
+          gs.grenades++;
+          updateGrenadeBtn();
+          spawnParticles(br.holeX, br.holeY, '#ffd700', 20);
+          addFloat(br.holeX, br.holeY-20, 'HOLE IN ONE! +GRENADE', '#ffd700', true);
+          sfxPickup();
+          // Sunk - go to tally
+          br.hioBallFlight = null;
+          br.hioAttempted = true;
+          setTimeout(function() {
+            if (bonusRound) { buildTally(); bonusRound.phase = 'tally'; }
+          }, 1200);
+        } else {
+          // Miss - let them keep trying
+          addFloat(br.hioBallFlight.tx, br.hioBallFlight.ty, 'MISS!', '#ff4444', false);
+          br.hioBallFlight = null;
+          // NOT setting hioAttempted - they can shoot again
+        }
+      }
+    }
+    return;
+  }
+
+  // TALLY PHASE - just wait for tap
+  if (br.phase === 'tally') {
+    br.tallyTimer++;
+    return;
+  }
+}
+
+function resolveBonusBallHit(bf) {
+  var br = bonusRound;
+  var hit = false;
+  br.bonusZombies = br.bonusZombies.filter(function(z) {
+    if (dist(bf.tx, bf.ty, z.x, z.y) < 50) {
+      z.hp -= 15;
+      spawnParticles(z.x, z.y, '#44ff88', 6);
+      if (z.hp <= 0) {
+        br.shotsHit++;
+        gs.score += 100;
+        addFloat(z.x, z.y, '+100', '#ffe044', false);
+        sfxZombieDie();
+        hit = true;
+        return false;
+      }
+    }
+    return true;
+  });
+  if (!hit) spawnParticles(bf.tx, bf.ty, '#fff', 3);
+}
+
+function buildTally() {
+  var br = bonusRound;
+  var zombiesKilled = br.shotsHit;
+  var missed = br.totalZombies - zombiesKilled;
+  var accuracy = br.totalZombies > 0 ? Math.round((zombiesKilled / br.totalZombies) * 100) : 0;
+  var bonus = zombiesKilled * 100;
+  if (accuracy === 100) {
+    bonus += 10000;
+  }
+  // Golf scoring: par is 5 (one shot per zombie), missed zombies = strokes over par
+  var strokes = br.shotsTotal + missed;
+  var par = br.totalZombies;
+  var strokeDiff = strokes - par;
+  var golfScore = strokeDiff <= 0 ? (strokeDiff === 0 ? 'PAR' : (-strokeDiff === 1 ? 'BIRDIE' : (-strokeDiff === 2 ? 'EAGLE' : 'ALBATROSS'))) : (strokeDiff === 1 ? 'BOGEY' : (strokeDiff === 2 ? 'DOUBLE BOGEY' : strokeDiff + ' OVER'));
+
+  // Add to scorecard
+  bonusScorecard.push({
+    hole: bonusScorecard.length + 1,
+    wave: gs.wave,
+    zombiesKilled: zombiesKilled,
+    total: br.totalZombies,
+    shots: br.shotsTotal,
+    missed: missed,
+    accuracy: accuracy,
+    bonus: bonus,
+    hio: br.hioSunk,
+    golfScore: golfScore,
+    strokeDiff: strokeDiff
+  });
+
+  gs.score += bonus;
+  br.tallyData = {
+    zombiesKilled: zombiesKilled,
+    missed: missed,
+    accuracy: accuracy,
+    bonus: bonus,
+    hio: br.hioSunk,
+    hioShots: br.hioShots,
+    shotsTotal: br.shotsTotal,
+    golfScore: golfScore,
+    strokeDiff: strokeDiff
+  };
+}
+
+/* =========================================================
+   DRAW BONUS ROUND
+========================================================= */
+function drawBonusRound() {
+  if (!bonusRound) return;
+  var br = bonusRound;
+
+  // Background - same range
+  drawRange();
+
+  // Dark overlay to focus attention
+  ctx.fillStyle = 'rgba(0,0,10,0.45)';
+  ctx.fillRect(0, 0, W, H);
+
+  // INTRO SCREEN
+  if (br.phase === 'intro') {
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffd700'; ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 20;
+    ctx.font = 'bold 22px Arial Black';
+    ctx.fillText('DRONE RECONFIGURATION', W/2, H*0.28);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,220,100,0.85)';
+    ctx.font = 'bold 11px Arial';
+    ctx.fillText('BONUS ROUND - HOLE ' + (bonusScorecard.length + 1), W/2, H*0.36);
+    ctx.fillStyle = 'rgba(200,255,200,0.8)';
+    ctx.font = '11px Arial';
+    ctx.fillText('Drag your finger to move the drone.', W/2, H*0.46);
+    ctx.fillText('Aim the drone over the barrel to light it.', W/2, H*0.52);
+    ctx.fillText('Then shoot each zombie before they reach Colin!', W/2, H*0.58);
+    ctx.fillText('Missed zombies count as STROKES.', W/2, H*0.64);
+    ctx.fillStyle = '#ff8888';
+    ctx.font = 'bold 11px Arial';
+    ctx.fillText('Finally - sink a hole in one for a BONUS GRENADE.', W/2, H*0.72);
+    var blink = Math.floor(frameCount/20)%2;
+    if (blink) {
+      ctx.fillStyle = '#44ff88';
+      ctx.font = 'bold 13px Arial Black';
+      ctx.fillText('TAP TO BEGIN', W/2, H*0.84);
+    }
+    ctx.restore();
+    // Skip intro on tap
+    if (br.introTimer < 150) {
+      // already tappable - handled in input
+    }
+    return;
+  }
+
+  // Draw barrel
+  drawOilBarrel(br.barrelX, br.barrelY, br.barrelLit, br.barrelFlameT);
+
+  // AIM phase instructions
+  if (br.phase === 'aim') {
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,220,100,0.9)';
+    ctx.font = 'bold 13px Arial Black';
+    ctx.fillText('DRAG DRONE OVER THE BARREL', W/2, H*0.25);
+    ctx.font = '10px Arial';
+    ctx.fillStyle = 'rgba(200,255,200,0.7)';
+    ctx.fillText('Hold it there to light the fuse...', W/2, H*0.31);
+
+    // Progress ring around barrel
+    if (br.droneOnBarrel && br.droneOnBarrelTimer > 0) {
+      var prog = br.droneOnBarrelTimer / 90;
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 4;
+      ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(px(br.barrelX), py(br.barrelY), 32, -Math.PI/2, -Math.PI/2 + prog*Math.PI*2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+  }
+
+  // Draw hole-in-one hole during HIO phase
+  if (br.phase === 'hio' || br.phase === 'tally') {
+    drawHIOHole(br.holeX, br.holeY);
+  }
+
+  // Draw bonus zombies
+  br.bonusZombies.forEach(function(z) {
+    drawZombie(z.x, z.y, 0.85, z.hp, z.maxHp, z.type);
+  });
+
+  // Draw ball in flight
+  if (br.ballInFlight) {
+    drawBallFlight(br.ballInFlight);
+  }
+  if (br.hioBallFlight) {
+    drawBallFlight(br.hioBallFlight);
+  }
+
+  // Draw golfer
+  var sp = gs.swingState === 'windup' ? 'windup' : (gs.swingState === 'swing' ? 'swing' : 'address');
+  drawGolfer(gs.golferX, gs.golferY, gs.swingT, sp);
+
+  // Draw drone
+  drawDrone(gs.droneX, gs.droneY);
+
+  // Particles
+  gs.particles.forEach(function(p) {
+    if (p.isFlame) return;
+    ctx.save(); ctx.globalAlpha = p.life;
+    if (p.isLaser) {
+      ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(px(p.x),py(p.y)); ctx.lineTo(px(p.tx),py(p.ty)); ctx.stroke();
+    } else {
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(px(p.x),py(p.y),p.r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  });
+
+  // Float texts
+  gs.floats.forEach(function(f) {
+    ctx.save(); ctx.globalAlpha = f.alpha;
+    ctx.fillStyle = f.color; ctx.shadowColor = f.color; ctx.shadowBlur = 10;
+    ctx.font = (f.big?'bold 18px':'bold 13px')+' Arial';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(f.text, f.x, f.y);
+    ctx.restore();
+  });
+
+  // HIO phase instructions
+  if (br.phase === 'hio' && !br.hioBallFlight) {
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffd700'; ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 12;
+    ctx.font = 'bold 15px Arial Black';
+    ctx.fillText('HOLE IN ONE ATTEMPT!', W/2, H*0.25);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(200,255,200,0.8)';
+    ctx.font = '11px Arial';
+    ctx.fillText('Aim the drone at the hole and tap to shoot!', W/2, H*0.31);
+    ctx.fillText('+1 GRENADE if you sink it!', W/2, H*0.37);
+    if (br.hioShots > 0) {
+      ctx.fillStyle = '#ffaa44';
+      ctx.fillText('Shots taken: ' + br.hioShots, W/2, H*0.43);
+    }
+    // Skip button
+    ctx.fillStyle = 'rgba(100,100,100,0.7)';
+    ctx.beginPath(); rr(W*0.3, H*0.48, W*0.4, 28, 6); ctx.fill();
+    ctx.fillStyle = '#aaa'; ctx.font = 'bold 10px Arial';
+    ctx.fillText('SKIP HOLE', W/2, H*0.48+14);
+    ctx.restore();
+  }
+
+  // Shooting phase HUD
+  if (br.phase === 'circling' || br.phase === 'shooting') {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath(); rr(W*0.05, H*0.04, W*0.9, 44, 7); ctx.fill();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#44ff88'; ctx.font = 'bold 12px Arial';
+    ctx.fillText('ZOMBIES: ' + br.bonusZombies.length + ' / ' + br.totalZombies, W*0.3, H*0.04+22);
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText('BONUS ROUND - HOLE ' + (bonusScorecard.length+1), W/2, H*0.04+22);
+    ctx.fillStyle = '#ff88ff';
+    ctx.fillText('SHOTS: ' + br.shotsTotal, W*0.75, H*0.04+22);
+    ctx.restore();
+  }
+
+  // TALLY SCREEN
+  if (br.phase === 'tally' && br.tallyData) {
+    drawBonusTally(br.tallyData);
+  }
+}
+
+function drawOilBarrel(x, y, lit, flameT) {
+  ctx.save();
+  ctx.translate(px(x), py(y));
+
+  // Barrel body
+  ctx.fillStyle = '#333';
+  ctx.fillRect(-14, -22, 28, 44);
+
+  // Barrel bands
+  ctx.fillStyle = '#555';
+  ctx.fillRect(-15, -22, 30, 5);
+  ctx.fillRect(-15, -4, 30, 5);
+  ctx.fillRect(-15, 14, 30, 5);
+
+  // Hazard stripes
+  ctx.fillStyle = '#ffcc00';
+  ctx.fillRect(-14, -22, 5, 44);
+  ctx.fillStyle = '#333';
+  ctx.fillRect(-14, -22, 2, 44);
+
+  // Skull or X marking
+  ctx.fillStyle = '#ffcc00';
+  ctx.font = 'bold 14px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('!', 4, 2);
+
+  // Lid
+  ctx.fillStyle = '#444';
+  ctx.fillRect(-15, -24, 30, 6);
+
+  // Flames if lit
+  if (lit) {
+    var ft = flameT;
+    ctx.fillStyle = 'rgba(255,100,0,0.9)';
+    ctx.beginPath();
+    ctx.moveTo(-8, -22);
+    ctx.quadraticCurveTo(-14+Math.sin(ft)*4, -38, -4+Math.sin(ft*1.3)*3, -48);
+    ctx.quadraticCurveTo(2, -36, 8, -22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,220,0,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(-4, -22);
+    ctx.quadraticCurveTo(-8+Math.sin(ft*0.9)*3, -34, 0+Math.sin(ft*1.5)*2, -42);
+    ctx.quadraticCurveTo(5, -32, 6, -22);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawHIOHole(x, y) {
+  ctx.save();
+  // Hole shadow
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(px(x), py(y), 12, 0, Math.PI*2); ctx.fill();
+  // Hole rim
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(px(x), py(y), 12, 0, Math.PI*2); ctx.stroke();
+  // Flag pole
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(px(x), py(y-12)); ctx.lineTo(px(x), py(y-42)); ctx.stroke();
+  // Flag
+  ctx.fillStyle = '#ff4444';
+  ctx.beginPath();
+  ctx.moveTo(px(x), py(y-42));
+  ctx.lineTo(px(x+16), py(y-35));
+  ctx.lineTo(px(x), py(y-28));
+  ctx.closePath();
+  ctx.fill();
+  // Glow ring
+  ctx.strokeStyle = 'rgba(255,220,0,0.5)'; ctx.lineWidth = 3;
+  ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 10;
+  ctx.beginPath(); ctx.arc(px(x), py(y), 18, 0, Math.PI*2); ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+function drawBonusTally(td) {
+  var pw = Math.min(W*0.88, 340);
+  var ph = H * 0.62;
+  var px2 = (W-pw)/2;
+  var py2 = (H-ph)/2;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,8,0,0.96)';
+  ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+  ctx.beginPath(); rr(px2, py2, pw, ph, 12); ctx.fill(); ctx.stroke();
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  // Header
+  ctx.fillStyle = '#ffd700'; ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 14;
+  ctx.font = 'bold 16px Arial Black';
+  ctx.fillText('DRONE RECONFIG COMPLETE', W/2, py2+26);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = '#aaddaa'; ctx.font = '10px Arial';
+  ctx.fillText('HOLE ' + bonusScorecard.length + ' - SCORECARD', W/2, py2+48);
+
+  // Divider
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(px2+16, py2+58, pw-32, 1);
+
+  // Stats rows
+  var rows = [
+    {label:'ZOMBIES HIT', val: td.zombiesKilled + ' / 5',    color:'#44ff88'},
+    {label:'MISSED',      val: td.missed + ' zombie' + (td.missed!==1?'s':''), color: td.missed>0?'#ff6666':'#44ff88'},
+    {label:'ZOMBIE SHOTS',val: td.shotsTotal || '0',          color:'#aaddff'},
+    {label:'HIO SHOTS',   val: td.hioShots > 0 ? td.hioShots : '-', color: td.hioSunk ? '#ffd700' : '#aaddff'},
+    {label:'ACCURACY',    val: td.accuracy + '%',             color:'#ffcc44'},
+    {label:'GOLF SCORE',  val: td.golfScore,                  color: td.strokeDiff <= 0 ? '#ffd700' : td.strokeDiff===1 ? '#ffaa44' : '#ff6666'},
+    {label:'HOLE IN ONE', val: td.hio ? 'YES! +GRENADE' : (td.hioShots > 0 ? 'MISS ('+td.hioShots+' shots)' : 'SKIPPED'), color: td.hio?'#ffd700':'#888'},
+  ];
+
+  var rowH = 34;
+  rows.forEach(function(row, i) {
+    var ry = py2 + 74 + i*rowH;
+    ctx.fillStyle = i%2===0 ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0)';
+    ctx.fillRect(px2+8, ry-14, pw-16, rowH);
+    ctx.fillStyle = 'rgba(180,220,180,0.7)';
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(row.label, px2+20, ry);
+    ctx.fillStyle = row.color;
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(row.val, px2+pw-20, ry);
+  });
+
+  // Bonus points
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(px2+16, py2+78+rows.length*rowH-8, pw-32, 1);
+  ctx.font = 'bold 14px Arial Black';
+  ctx.textAlign = 'center';
+  var bonusText = td.accuracy===100 ? '+' + td.bonus + ' (PERFECT +10000!)' : '+' + td.bonus;
+  ctx.fillStyle = td.accuracy===100 ? '#ffd700' : '#44ff88';
+  ctx.shadowColor = td.accuracy===100 ? '#ffd700' : '#44ff88'; ctx.shadowBlur = 8;
+  ctx.fillText('BONUS SCORE: ' + bonusText, W/2, py2+78+rows.length*rowH+12);
+  ctx.shadowBlur = 0;
+
+  // Tap to continue
+  var blink = Math.floor(frameCount/25)%2;
+  if (blink && bonusRound.tallyTimer > 60) {
+    ctx.fillStyle = '#44ff88'; ctx.font = 'bold 13px Arial Black';
+    ctx.fillText('TAP TO CONTINUE', W/2, py2+ph-20);
+  }
+  ctx.restore();
+}
+
+/* =========================================================
    START GAME
 ========================================================= */
 function startGame() {
@@ -2252,13 +2886,37 @@ function startGame() {
    MAIN LOOP
 ========================================================= */
 function loop() {
+  try {
   if (gameMode==='title') {
     drawTitle();
   } else if (gameMode==='story') {
     drawStory();
+  } else if (gameMode==='bonus') {
+    // Update particles/floats even in bonus
+    if (gs) {
+      gs.particles=gs.particles.filter(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=0.05;p.life-=p.decay;return p.life>0;});
+      gs.floats=gs.floats.filter(function(f){f.y+=f.vy;f.alpha-=0.015;return f.alpha>0;});
+      // Swing animation
+      if (gs.swingState==='windup') {
+        gs.swingT+=0.25;
+        if (gs.swingT>=1) { gs.swingState='swing'; gs.swingT=0; fireBonusBall(); }
+      } else if (gs.swingState==='swing') {
+        gs.swingT+=0.3;
+        if (gs.swingT>=1) { gs.swingState='idle'; gs.swingT=0; }
+      }
+    }
+    updateBonusRound();
+    drawBonusRound();
   } else if (gameMode==='playing') {
     if (gs&&!gs.gameOver) update();
     draw();
+  }
+  } catch(e) {
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#ff4444'; ctx.font='bold 12px Arial';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('ERROR: '+e.message, W/2, H/2);
+    ctx.fillText((e.stack||'').split('\n')[1]||'', W/2, H/2+20);
   }
   requestAnimationFrame(loop);
 }
@@ -2284,7 +2942,15 @@ canvas.addEventListener('touchstart',function(e){
     advanceStory();
     return;
   }
+  if (gameMode==='bonus') {
+    if (gs) gs.droneDragging = true;
+    handleBonusTap(tx, ty);
+    return;
+  }
   if (!gs||!gs.running) return;
+
+  // Always start drone drag on any touch in playing mode
+  gs.droneDragging = true;
 
   // Check if tapping cart
   for (var ci=0;ci<gs.carts.length;ci++) {
@@ -2303,7 +2969,8 @@ canvas.addEventListener('touchstart',function(e){
 
 canvas.addEventListener('touchmove',function(e){
   e.preventDefault();
-  if (!gs||!gs.running) return;
+  if (!gs) return;
+  if (gameMode!=='bonus' && !gs.running) return;
   var tx=e.touches[0].clientX, ty=e.touches[0].clientY;
   isDragging=true;
 
@@ -2316,7 +2983,18 @@ canvas.addEventListener('touchmove',function(e){
 
 canvas.addEventListener('touchend',function(e){
   e.preventDefault();
-  if (!gs||!gs.running) return;
+  if (!gs) return;
+  if (gameMode==='bonus') {
+    gs.droneDragging=false;
+    if (!isDragging || Date.now()-touchStartTime<200) {
+      var ex2=e.changedTouches[0].clientX;
+      var ey2=e.changedTouches[0].clientY;
+      if (ey2>H*0.7) { gs.swingState='windup'; gs.swingT=0; }
+    }
+    isDragging=false;
+    return;
+  }
+  if (!gs.running) return;
   gs.droneDragging=false;
 
   // Quick tap in lower zone = swing
@@ -2334,9 +3012,11 @@ canvas.addEventListener('touchend',function(e){
 
 // Mouse for desktop testing
 canvas.addEventListener('mousemove',function(e){
-  if (!gs||!gs.running) return;
-  gs.droneX=Math.max(W*0.05,Math.min(W*0.95,e.clientX));
-  gs.droneY=Math.max(H*0.58,Math.min(H*0.84,e.clientY));
+  if (!gs) return;
+  if (gameMode==='playing'||gameMode==='bonus') {
+    gs.droneX=Math.max(W*0.05,Math.min(W*0.95,e.clientX));
+    gs.droneY=Math.max(H*0.52,Math.min(H*0.84,e.clientY));
+  }
 });
 
 canvas.addEventListener('click',function(e){
@@ -2346,6 +3026,10 @@ canvas.addEventListener('click',function(e){
   }
   if (gameMode==='story') {
     advanceStory();
+    return;
+  }
+  if (gameMode==='bonus') {
+    handleBonusTap(e.clientX, e.clientY);
     return;
   }
   if (!gs||!gs.running) return;
@@ -2405,6 +3089,8 @@ function onYouTubeIframeAPIReady(){
   ytPlayer=new YT.Player('ytPlayerContainer',cfg);
 }
 </script>
+
+<script src="https://www.youtube.com/iframe_api" async></script>
 
 </body>
 </html>
